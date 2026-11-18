@@ -18,8 +18,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   static const int _segundosEntreEnvios = 60;
 
-  final _correoController = TextEditingController(text: 'bhleonel705@gmail.com');
-  final _passwordController = TextEditingController(text: 'Password123!');
+  final _correoController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _otpController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
