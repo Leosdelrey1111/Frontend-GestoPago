@@ -1,3 +1,5 @@
+import '../../core/constants/api_constants.dart';
+
 class LoginResponse {
   final int codigo;
   final String mensaje;
@@ -87,14 +89,28 @@ class CatalogoProductoModel {
   factory CatalogoProductoModel.fromJson(Map<String, dynamic> json) {
     return CatalogoProductoModel(
       id: (json['id'] ?? '').toString(),
-      nombreProducto: json['nombreProducto'] ?? '',
-      servicio: json['servicio'] ?? '',
+      nombreProducto: (json['nombreProducto'] ?? '').toString(),
+      servicio: (json['servicio'] ?? '').toString(),
       idServicio: (json['idServicio'] ?? '').toString(),
       idProducto: (json['idProducto'] ?? '').toString(),
-      precio: (json['precio'] as num?)?.toDouble(),
-      tipoReferencia: json['tipoReferencia'],
-      urlLogo: json['urlLogo'],
+      precio: _parseDouble(json['precio']),
+      tipoReferencia: json['tipoReferencia']?.toString(),
+      urlLogo: _resolverUrlLogo(json['urlLogo']),
     );
+  }
+
+  static String? _resolverUrlLogo(dynamic raw) {
+    if (raw == null) return null;
+    final s = raw.toString().trim();
+    if (s.isEmpty) return null;
+    if (s.startsWith('http://') || s.startsWith('https://')) return s;
+    return '${ApiConstants.baseUrl}${s.startsWith('/') ? s : '/$s'}';
+  }
+
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString().trim());
   }
 }
 
@@ -118,14 +134,16 @@ class TransaccionResponseModel {
   });
 
   factory TransaccionResponseModel.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] is Map<String, dynamic> ? json['data'] as Map<String, dynamic> : json;
+    final rawFolio = data['folioTransaccion'] ?? data['folio'];
     return TransaccionResponseModel(
-      folioTransaccion: json['folioTransaccion'],
-      autorizacion: json['autorizacion'],
-      mensaje: json['mensaje'] ?? '',
-      estatus: json['estatus'] ?? '',
-      monto: (json['monto'] as num?)?.toDouble(),
-      nuevoSaldo: (json['nuevoSaldo'] as num?)?.toDouble(),
-      fechaCreacion: json['fechaCreacion'],
+      folioTransaccion: rawFolio is int ? rawFolio : int.tryParse('${rawFolio ?? ''}'),
+      autorizacion: (data['numAutorizacion'] ?? data['autorizacion'])?.toString(),
+      mensaje: (data['mensaje'] ?? json['mensaje'] ?? '').toString(),
+      estatus: (data['estatus'] ?? '').toString(),
+      monto: (data['monto'] as num?)?.toDouble() ?? double.tryParse('${data['monto'] ?? ''}'),
+      nuevoSaldo: (data['nuevoSaldo'] as num?)?.toDouble() ?? double.tryParse('${data['nuevoSaldo'] ?? ''}'),
+      fechaCreacion: (data['fecha'] ?? data['fechaCreacion'])?.toString(),
     );
   }
 }
@@ -138,9 +156,9 @@ class TransaccionHistorialModel {
   final double monto;
   final String fecha;
   final String estado;
+  final String? numAutorizacion;
 
   String get producto => servicio;
-  String? get numAutorizacion => 'AUT-';
 
   TransaccionHistorialModel({
     required this.id,
@@ -150,17 +168,21 @@ class TransaccionHistorialModel {
     required this.monto,
     required this.fecha,
     required this.estado,
+    this.numAutorizacion,
   });
 
   factory TransaccionHistorialModel.fromJson(Map<String, dynamic> json) {
+    final rawFolio = json['folioTransaccion'] ?? json['folio'] ?? json['id'] ?? 0;
+    final parsedFolio = rawFolio is int ? rawFolio : int.tryParse(rawFolio.toString()) ?? 0;
     return TransaccionHistorialModel(
-      id: json['id'] ?? 0,
-      folio: json['folio'] ?? json['id'] ?? 0,
-      servicio: json['servicio'] ?? json['producto'] ?? json['idServicio'] ?? 'Servicio',
-      referencia: json['referencia'] ?? json['telefonoOreferencia'] ?? '',
-      monto: (json['monto'] as num?)?.toDouble() ?? 0.0,
-      fecha: json['fecha'] ?? json['fechaCreacion'] ?? '',
-      estado: json['estado'] ?? json['estatus'] ?? 'EXITOSO',
+      id: parsedFolio,
+      folio: parsedFolio,
+      servicio: (json['servicio'] ?? json['producto'] ?? json['idServicio'] ?? 'Servicio').toString(),
+      referencia: (json['referencia'] ?? json['telefonoOreferencia'] ?? json['upc'] ?? '').toString(),
+      monto: (json['monto'] as num?)?.toDouble() ?? double.tryParse('${json['monto']}') ?? 0.0,
+      fecha: (json['fecha'] ?? json['fechaCreacion'] ?? '').toString(),
+      estado: (json['estado'] ?? json['estatus'] ?? 'EXITOSO').toString(),
+      numAutorizacion: json['numAutorizacion']?.toString(),
     );
   }
 }
@@ -189,16 +211,17 @@ class TicketModel {
   });
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] is Map<String, dynamic> ? json['data'] as Map<String, dynamic> : json;
     return TicketModel(
-      folio: (json['folio'] ?? json['id'] ?? '').toString(),
-      fechaHora: (json['fechaOperacion'] ?? json['fecha'] ?? '').toString(),
-      nombreServicio: (json['servicio'] ?? json['producto'] ?? 'Servicio de Pago').toString(),
-      referencia: (json['referenciaOTelefono'] ?? json['referencia'] ?? '').toString(),
-      monto: (json['monto'] as num?)?.toDouble() ?? 0.0,
-      comision: (json['comision'] as num?)?.toDouble() ?? 0.0,
-      autorizacionProveedor: (json['numeroAutorizacion'] ?? json['idTransaccionProveedor'] ?? 'AUT-APROBADA').toString(),
-      estatus: (json['estatus'] ?? 'EXITOSO').toString(),
-      leyendaFiscal: (json['leyenda'] ?? 'Transacción bancaria procesada en tiempo real mediante cifrado bancario seguro.').toString(),
+      folio: (data['folio'] ?? data['id'] ?? '').toString(),
+      fechaHora: (data['fechaOperacion'] ?? data['fecha'] ?? '').toString(),
+      nombreServicio: (data['servicio'] ?? data['producto'] ?? 'Servicio de Pago').toString(),
+      referencia: (data['referenciaOTelefono'] ?? data['referencia'] ?? '').toString(),
+      monto: (data['monto'] as num?)?.toDouble() ?? double.tryParse('${data['monto']}') ?? 0.0,
+      comision: (data['comision'] as num?)?.toDouble() ?? 0.0,
+      autorizacionProveedor: (data['numeroAutorizacion'] ?? data['idTransaccionProveedor'] ?? 'AUT-APROBADA').toString(),
+      estatus: (data['estatus'] ?? 'EXITOSO').toString(),
+      leyendaFiscal: (data['leyenda'] ?? 'Transacción bancaria procesada en tiempo real mediante cifrado bancario seguro.').toString(),
     );
   }
 }

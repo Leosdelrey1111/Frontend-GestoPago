@@ -19,13 +19,11 @@ class ApiService {
     return LoginResponse.fromJson(response.data);
   }
 
-  Future<Map<String, dynamic>> reenviarOtp(String correo) async {
+  Future<Map<String, dynamic>> reenviarOtp(String correo, String preAuthToken) async {
     final response = await _dio.post(
       '/auth/2fa/reenviar-otp',
-      data: {
-        'correo': correo,
-        'otp': '000000',
-      },
+      data: {'correo': correo},
+      options: Options(headers: {'X-Pre-Auth-Token': preAuthToken}),
     );
     if (response.data is Map<String, dynamic>) {
       return response.data as Map<String, dynamic>;
@@ -39,8 +37,6 @@ class ApiService {
     required String correo,
     required String telefono,
     required String password,
-    required String pin,
-    double depositoInicial = 1000.0,
   }) async {
     final response = await _dio.post(
       '/auth/registro',
@@ -50,8 +46,6 @@ class ApiService {
         'correo': correo,
         'telefono': telefono,
         'password': password,
-        'pin': pin,
-        'depositoInicial': depositoInicial,
       },
     );
     if (response.data is Map<String, dynamic>) {
@@ -67,6 +61,7 @@ class ApiService {
         'correo': correo,
         'otp': codigoOtp,
       },
+      options: Options(headers: {'X-Pre-Auth-Token': preAuthToken}),
     );
     final data = response.data is Map<String, dynamic> ? response.data : {};
     final token = (data['token'] ?? data['data']?['token']) as String;

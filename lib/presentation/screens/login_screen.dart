@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/bank_theme.dart';
 import '../providers/auth_provider.dart';
+
+enum _MetodoVerificacion { app, correo }
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,6 +16,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  static const int _segundosEntreEnvios = 60;
+
   final _correoController = TextEditingController(text: 'bhleonel705@gmail.com');
   final _passwordController = TextEditingController(text: 'Password123!');
   final _otpController = TextEditingController();
@@ -19,16 +25,62 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _mostrarPasoOtp = false;
   bool _obscurePassword = true;
-  // 0 = Google Authenticator (TOTP), 1 = SMS / Correo (OTP)
-  int _metodo2FASeleccionado = 0;
-  bool _mostrarQrForzado = false;
+  bool _codigoCorreoEnviado = false;
+  int _segundosRestantes = 0;
+  Timer? _temporizador;
+  _MetodoVerificacion? _metodoElegido;
 
   @override
   void dispose() {
+    _temporizador?.cancel();
     _correoController.dispose();
     _passwordController.dispose();
     _otpController.dispose();
     super.dispose();
+  }
+
+  void _reiniciarPasoVerificacion() {
+    _temporizador?.cancel();
+    _otpController.clear();
+    _codigoCorreoEnviado = false;
+    _segundosRestantes = 0;
+    _metodoElegido = null;
+  }
+
+  void _elegirMetodo(_MetodoVerificacion metodo) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    auth.limpiarError();
+    setState(() {
+      _metodoElegido = metodo;
+      _otpController.clear();
+    });
+
+    if (metodo == _MetodoVerificacion.correo && !_codigoCorreoEnviado && _segundosRestantes <= 0) {
+      await _enviarCodigoPorCorreo();
+    }
+  }
+
+  void _volverASelectorMetodo() {
+    Provider.of<AuthProvider>(context, listen: false).limpiarError();
+    setState(() {
+      _metodoElegido = null;
+      _otpController.clear();
+    });
+  }
+
+  void _iniciarCuentaRegresiva() {
+    _temporizador?.cancel();
+    setState(() => _segundosRestantes = _segundosEntreEnvios);
+    _temporizador = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      setState(() {
+        _segundosRestantes--;
+        if (_segundosRestantes <= 0) t.cancel();
+      });
+    });
   }
 
   void _enviarLogin() async {
@@ -41,58 +93,54 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (requiere2FA) {
       setState(() {
+        _reiniciarPasoVerificacion();
         _mostrarPasoOtp = true;
-        _otpController.clear();
-        _mostrarQrForzado = false;
-        // Si ya tiene TOTP activado, por defecto va a la pestaa de Google Authenticator
-        _metodo2FASeleccionado = 0;
       });
-    } else if (auth.isAuthenticated) {
-      if (mounted) {
-        if (!auth.tienePinConfigurado) {
-          Navigator.pushReplacementNamed(context, '/configurar-pin');
-        } else {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
-      }
+    } else if (auth.isAuthenticated && mounted) {
+      _irAlInicio(auth);
+    }
+  }
+
+  void _irAlInicio(AuthProvider auth) {
+    Navigator.pushReplacementNamed(
+      context,
+      auth.tienePinConfigurado ? '/home' : '/configurar-pin',
+    );
+  }
+
+  Future<void> _enviarCodigoPorCorreo() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final exito = await auth.reenviarCodigoCorreo();
+    if (!mounted) return;
+    if (exito) {
+      setState(() => _codigoCorreoEnviado = true);
+      _iniciarCuentaRegresiva();
+      _mostrarMensaje('Código enviado a ${auth.correoEnmascarado ?? 'su correo registrado'}.', BankTheme.emeraldSuccess);
     }
   }
 
   void _enviarOtp() async {
     if (_otpController.text.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ingresa los 6 dgitos del cdigo de seguridad.'),
-          backgroundColor: BankTheme.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _mostrarMensaje('Ingresa los 6 dígitos del código de seguridad.', BankTheme.danger);
       return;
     }
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final exito = await auth.verificarOtp(_otpController.text.trim());
     if (exito && mounted) {
-      if (!auth.tienePinConfigurado) {
-        Navigator.pushReplacementNamed(context, '/configurar-pin');
-      } else {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      _irAlInicio(auth);
     }
   }
 
-  void _solicitarReenvioCorreo() async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final exito = await auth.reenviarCodigoCorreo();
-    if (exito && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cdigo enviado a su telfono '),
-          backgroundColor: BankTheme.emeraldSuccess,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+  void _mostrarMensaje(String texto, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(texto),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -144,11 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
       padding: const EdgeInsets.all(44),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xFF0F2027),
-            Color(0xFF1B2E3D),
-            Color(0xFF0A192F),
-          ],
+          colors: [Color(0xFF0F2027), Color(0xFF1B2E3D), Color(0xFF0A192F)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -169,28 +213,19 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 24),
           const Text(
             'GESTOPAGO BANK',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
+            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.5),
           ),
           const SizedBox(height: 10),
           Text(
             'Pasarela transaccional corporativa y ecosistema de pagos en tiempo real.',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
-              fontSize: 13.5,
-              height: 1.6,
-            ),
+            style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13.5, height: 1.6),
           ),
           const SizedBox(height: 36),
-          _buildFeaturePill(Icons.verified_user_rounded, 'Autenticacin TOTP (RFC 6238 / Google Authenticator)'),
+          _buildFeaturePill(Icons.verified_user_rounded, 'Verificación en dos pasos (TOTP / correo)'),
           const SizedBox(height: 14),
-          _buildFeaturePill(Icons.phonelink_lock_rounded, 'Single Active Session respaldada en Base de Datos'),
+          _buildFeaturePill(Icons.phonelink_lock_rounded, 'Una sola sesión activa por usuario'),
           const SizedBox(height: 14),
-          _buildFeaturePill(Icons.shield_rounded, 'Cifrado Bancario AES-256 e Idempotencia UUID v4'),
+          _buildFeaturePill(Icons.shield_rounded, 'Operaciones protegidas con PIN e idempotencia'),
         ],
       ),
     );
@@ -198,25 +233,52 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildFeaturePill(IconData icon, String label) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Icon(icon, color: BankTheme.cyanAccent, size: 18),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
           ),
         ),
       ],
     );
   }
 
+  InputDecoration _decoracionCampo({String? hint, IconData? icono, Widget? sufijo, Color? colorFoco}) {
+    final borde = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: BankTheme.border),
+    );
+    return InputDecoration(
+      prefixIcon: icono != null ? Icon(icono, color: BankTheme.primary, size: 20) : null,
+      suffixIcon: sufijo,
+      hintText: hint,
+      hintStyle: const TextStyle(color: BankTheme.textHint, fontSize: 13),
+      filled: true,
+      fillColor: BankTheme.background,
+      border: borde,
+      enabledBorder: borde,
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: colorFoco ?? BankTheme.primary, width: 1.5),
+      ),
+    );
+  }
+
   Widget _buildFormSide(AuthProvider auth) {
+    String titulo = 'Acceso bancario';
+    String subtitulo = 'Ingresa tus credenciales para continuar';
+    if (_mostrarPasoOtp) {
+      titulo = 'Verificación de identidad';
+      subtitulo = _metodoElegido == null
+          ? 'Elige cómo quieres verificar tu cuenta'
+          : (_metodoElegido == _MetodoVerificacion.app
+              ? 'Ingresa el código generado en tu aplicación'
+              : 'Ingresa el código enviado a tu correo');
+    }
+
     return Padding(
       padding: const EdgeInsets.all(40),
       child: Form(
@@ -226,389 +288,334 @@ class _LoginScreenState extends State<LoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _mostrarPasoOtp ? 'Verificacin de Identidad' : 'Acceso Bancario',
-              style: const TextStyle(
-                color: BankTheme.textMain,
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-              ),
+              titulo,
+              style: const TextStyle(color: BankTheme.textMain, fontSize: 22, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 6),
-            Text(
-              _mostrarPasoOtp
-                  ? 'Selecciona tu mtodo de autenticacin preferido'
-                  : 'Ingresa tus credenciales institucionales registradas',
-              style: const TextStyle(color: BankTheme.textMuted, fontSize: 13),
-            ),
+            Text(subtitulo, style: const TextStyle(color: BankTheme.textMuted, fontSize: 13)),
             const SizedBox(height: 24),
-
-            if (auth.errorMessage != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: BankTheme.danger.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: BankTheme.danger.withOpacity(0.4)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline_rounded, color: BankTheme.danger, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        auth.errorMessage!,
-                        style: const TextStyle(color: BankTheme.danger, fontSize: 12.5),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            if (!_mostrarPasoOtp) ...[
-              // Input Correo
-              const Text('Correo Electrnico', style: TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _correoController,
-                style: const TextStyle(color: BankTheme.textMain, fontSize: 14),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.email_outlined, color: BankTheme.primary, size: 20),
-                  hintText: 'ejemplo@banco.com',
-                  hintStyle: const TextStyle(color: BankTheme.textHint, fontSize: 13),
-                  filled: true,
-                  fillColor: BankTheme.background,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: BankTheme.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: BankTheme.border)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: BankTheme.primary, width: 1.5)),
-                ),
-                validator: (v) => (v == null || !v.contains('@')) ? 'Ingrese un correo vlido' : null,
-              ),
-              const SizedBox(height: 16),
-
-              // Input Password
-              const Text('Contrasea de Acceso', style: TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _passwordController,
-                obscureText: _obscurePassword,
-                style: const TextStyle(color: BankTheme.textMain, fontSize: 14),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.lock_outline_rounded, color: BankTheme.primary, size: 20),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: BankTheme.textHint, size: 20),
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                  ),
-                  filled: true,
-                  fillColor: BankTheme.background,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: BankTheme.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: BankTheme.border)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: BankTheme.primary, width: 1.5)),
-                ),
-                validator: (v) => (v == null || v.isEmpty) ? 'Ingrese su contrasea' : null,
-              ),
-              const SizedBox(height: 26),
-
-              // Botn Login
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: auth.isLoading ? null : _enviarLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: BankTheme.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                  child: auth.isLoading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Iniciar Sesin', style: TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.bold)),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              Center(
-                child: Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    const Text('No tienes cuenta bancaria?', style: TextStyle(color: BankTheme.textMuted, fontSize: 13)),
-                    TextButton(
-                      onPressed: () => Navigator.pushNamed(context, '/registro'),
-                      child: const Text(
-                        'Crear Cuenta',
-                        style: TextStyle(color: BankTheme.cyanAccent, fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else ...[
-              // SELECTOR PROFESIONAL DE METODO 2FA
-              _buildSelectorMetodo2FA(),
-              const SizedBox(height: 18),
-
-              // VISTA DINAMICA SEGUN EL METODO SELECCIONADO
-              if (_metodo2FASeleccionado == 0)
-                _buildMetodoGoogleAuth(auth)
-              else
-                _buildMetodoSmsOtp(auth),
-
-              const SizedBox(height: 22),
-
-              // INPUT 6 DIGITOS
-              const Text('Cdigo de Seguridad (6 dgitos)', style: TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _otpController,
-                maxLength: 6,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                autofocus: true,
-                style: const TextStyle(color: BankTheme.cyanAccent, fontSize: 26, letterSpacing: 14, fontWeight: FontWeight.w900),
-                decoration: InputDecoration(
-                  counterText: '',
-                  hintText: '',
-                  hintStyle: const TextStyle(color: BankTheme.textHint, letterSpacing: 14),
-                  filled: true,
-                  fillColor: BankTheme.background,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: BankTheme.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: BankTheme.border)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: BankTheme.cyanAccent, width: 1.5)),
-                ),
-              ),
-              const SizedBox(height: 22),
-
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: auth.isLoading ? null : _enviarOtp,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: BankTheme.emeraldSuccess,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                  child: auth.isLoading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Autorizar Acceso Seguro', style: TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: TextButton(
-                  onPressed: () => setState(() => _mostrarPasoOtp = false),
-                  child: const Text('Volver al inicio de sesin', style: TextStyle(color: BankTheme.textMuted, fontSize: 12.5)),
-                ),
-              ),
-            ],
+            if (auth.errorMessage != null) _buildBannerError(auth.errorMessage!),
+            if (!_mostrarPasoOtp)
+              ..._buildPasoCredenciales(auth)
+            else if (_metodoElegido == null)
+              ..._buildSelectorOpciones2FA(auth)
+            else
+              ..._buildPasoCodigo2FA(auth),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSelectorMetodo2FA() {
+  Widget _buildBannerError(String mensaje) {
     return Container(
-      padding: const EdgeInsets.all(4),
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: BankTheme.background,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: BankTheme.border),
+        color: BankTheme.danger.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BankTheme.danger.withOpacity(0.4)),
       ),
       child: Row(
         children: [
+          const Icon(Icons.error_outline_rounded, color: BankTheme.danger, size: 20),
+          const SizedBox(width: 10),
           Expanded(
-            child: InkWell(
-              onTap: () => setState(() => _metodo2FASeleccionado = 0),
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: _metodo2FASeleccionado == 0 ? BankTheme.surfaceElevated : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: _metodo2FASeleccionado == 0 ? Border.all(color: BankTheme.primary.withOpacity(0.5)) : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.security_rounded,
-                      size: 16,
-                      color: _metodo2FASeleccionado == 0 ? BankTheme.cyanAccent : BankTheme.textMuted,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'App Autenticadora',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        color: _metodo2FASeleccionado == 0 ? Colors.white : BankTheme.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: InkWell(
-              onTap: () => setState(() => _metodo2FASeleccionado = 1),
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: _metodo2FASeleccionado == 1 ? BankTheme.surfaceElevated : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: _metodo2FASeleccionado == 1 ? Border.all(color: BankTheme.primary.withOpacity(0.5)) : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.email_outlined,
-                      size: 16,
-                      color: _metodo2FASeleccionado == 1 ? BankTheme.cyanAccent : BankTheme.textMuted,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Correo Electrónico',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        color: _metodo2FASeleccionado == 1 ? Colors.white : BankTheme.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            child: Text(mensaje, style: const TextStyle(color: BankTheme.danger, fontSize: 12.5)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMetodoGoogleAuth(AuthProvider auth) {
-    final debeMostrarQr = auth.primerRegistro2FA || _mostrarQrForzado;
-
-    if (!debeMostrarQr) {
-      // PANTALLA LIMPIA DE BANCO: SOLO PIDE EL CODIGO DINAMICO
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: BankTheme.background,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: BankTheme.border),
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: BankTheme.primary.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.phonelink_lock_rounded, color: BankTheme.cyanAccent, size: 24),
-                ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Google Authenticator',
-                        style: TextStyle(color: BankTheme.textMain, fontSize: 13.5, fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Abre tu aplicacin autenticadora e ingresa el cdigo dinmico de 6 dgitos.',
-                        style: TextStyle(color: BankTheme.textMuted, fontSize: 11.5),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+  List<Widget> _buildPasoCredenciales(AuthProvider auth) {
+    return [
+      const Text('Correo electrónico', style: TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 6),
+      TextFormField(
+        controller: _correoController,
+        keyboardType: TextInputType.emailAddress,
+        style: const TextStyle(color: BankTheme.textMain, fontSize: 14),
+        decoration: _decoracionCampo(hint: 'nombre@correo.com', icono: Icons.email_outlined),
+        validator: (v) => (v == null || !v.contains('@')) ? 'Ingresa un correo válido' : null,
+      ),
+      const SizedBox(height: 16),
+      const Text('Contraseña', style: TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 6),
+      TextFormField(
+        controller: _passwordController,
+        obscureText: _obscurePassword,
+        style: const TextStyle(color: BankTheme.textMain, fontSize: 14),
+        decoration: _decoracionCampo(
+          icono: Icons.lock_outline_rounded,
+          sufijo: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              color: BankTheme.textHint,
+              size: 20,
             ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => setState(() => _mostrarQrForzado = true),
-                icon: const Icon(Icons.qr_code_2_rounded, size: 14, color: BankTheme.textMuted),
-                label: const Text(
-                  'Cambiaste de telfono? Ver cdigo QR',
-                  style: TextStyle(color: BankTheme.textMuted, fontSize: 11.5),
+            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+          ),
+        ),
+        validator: (v) => (v == null || v.isEmpty) ? 'Ingresa tu contraseña' : null,
+      ),
+      const SizedBox(height: 26),
+      _botonPrincipal(
+        texto: 'Iniciar sesión',
+        color: BankTheme.primary,
+        cargando: auth.isLoading,
+        onPressed: _enviarLogin,
+      ),
+      const SizedBox(height: 20),
+      Center(
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            const Text('¿Aún no tienes cuenta?', style: TextStyle(color: BankTheme.textMuted, fontSize: 13)),
+            TextButton(
+              onPressed: () => Navigator.pushNamed(context, '/registro'),
+              child: const Text(
+                'Crear cuenta',
+                style: TextStyle(color: BankTheme.cyanAccent, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  /// Paso 2A: Selector estilo Google con las opciones disponibles antes de ejecutar ningún método.
+  List<Widget> _buildSelectorOpciones2FA(AuthProvider auth) {
+    final destinoCorreo = auth.correoEnmascarado ?? 'tu correo registrado';
+    return [
+      _opcionVerificacionCard(
+        icono: Icons.security_rounded,
+        color: BankTheme.cyanAccent,
+        titulo: 'Google Authenticator',
+        subtitulo: auth.primerRegistro2FA
+            ? 'Vincula tu app autenticadora escaneando el código QR.'
+            : 'Obtén un código de verificación de 6 dígitos desde tu celular.',
+        onTap: auth.isLoading ? null : () => _elegirMetodo(_MetodoVerificacion.app),
+      ),
+      const SizedBox(height: 14),
+      _opcionVerificacionCard(
+        icono: Icons.email_outlined,
+        color: BankTheme.emeraldSuccess,
+        titulo: 'Enviar código por correo electrónico',
+        subtitulo: 'Recibe un código temporal de un solo uso en $destinoCorreo.',
+        onTap: auth.isLoading ? null : () => _elegirMetodo(_MetodoVerificacion.correo),
+      ),
+      const SizedBox(height: 22),
+      Center(
+        child: TextButton(
+          onPressed: () {
+            auth.limpiarError();
+            setState(() {
+              _reiniciarPasoVerificacion();
+              _mostrarPasoOtp = false;
+            });
+          },
+          child: const Text('Volver al inicio de sesión', style: TextStyle(color: BankTheme.textMuted, fontSize: 12.5)),
+        ),
+      ),
+    ];
+  }
+
+  Widget _opcionVerificacionCard({
+    required IconData icono,
+    required Color color,
+    required String titulo,
+    required String subtitulo,
+    required VoidCallback? onTap,
+  }) {
+    return Material(
+      color: BankTheme.background,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: BankTheme.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(11),
+                decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+                child: Icon(icono, color: color, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(titulo, style: const TextStyle(color: BankTheme.textMain, fontSize: 14, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 3),
+                    Text(subtitulo, style: const TextStyle(color: BankTheme.textMuted, fontSize: 12, height: 1.35)),
+                  ],
                 ),
               ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right_rounded, color: BankTheme.textMuted, size: 22),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Paso 2B: Vista enfocada únicamente en el método elegido.
+  List<Widget> _buildPasoCodigo2FA(AuthProvider auth) {
+    final esApp = _metodoElegido == _MetodoVerificacion.app;
+    return [
+      esApp ? _buildMetodoApp(auth) : _buildMetodoCorreo(auth),
+      const SizedBox(height: 22),
+      const Text('Código de seguridad (6 dígitos)', style: TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 8),
+      TextFormField(
+        controller: _otpController,
+        maxLength: 6,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: BankTheme.cyanAccent, fontSize: 26, letterSpacing: 14, fontWeight: FontWeight.w900),
+        decoration: _decoracionCampo(hint: '••••••', colorFoco: BankTheme.cyanAccent).copyWith(
+          counterText: '',
+          hintStyle: const TextStyle(color: BankTheme.textHint, fontSize: 26, letterSpacing: 14),
+        ),
+        onFieldSubmitted: (_) => _enviarOtp(),
+      ),
+      const SizedBox(height: 22),
+      _botonPrincipal(
+        texto: 'Verificar y continuar',
+        color: BankTheme.emeraldSuccess,
+        cargando: auth.isLoading,
+        onPressed: _enviarOtp,
+      ),
+      const SizedBox(height: 12),
+      Center(
+        child: TextButton.icon(
+          onPressed: auth.isLoading ? null : _volverASelectorMetodo,
+          icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: BankTheme.cyanAccent),
+          label: const Text('Probar otro método de verificación', style: TextStyle(color: BankTheme.cyanAccent, fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ),
+      ),
+    ];
+  }
+
+  Widget _botonPrincipal({
+    required String texto,
+    required Color color,
+    required bool cargando,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton(
+        onPressed: cargando ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 0,
+        ),
+        child: cargando
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : Text(texto, style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  BoxDecoration get _decoracionTarjeta => BoxDecoration(
+        color: BankTheme.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: BankTheme.border),
+      );
+
+  Widget _encabezadoTarjeta({
+    required IconData icono,
+    required Color color,
+    required String titulo,
+    required String descripcion,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+          child: Icon(icono, color: color, size: 24),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(titulo, style: const TextStyle(color: BankTheme.textMain, fontSize: 13.5, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text(descripcion, style: const TextStyle(color: BankTheme.textMuted, fontSize: 11.5, height: 1.4)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetodoApp(AuthProvider auth) {
+    if (!auth.primerRegistro2FA) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: _decoracionTarjeta,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _encabezadoTarjeta(
+              icono: Icons.phonelink_lock_rounded,
+              color: BankTheme.cyanAccent,
+              titulo: 'Google Authenticator',
+              descripcion: 'Abre tu aplicación en el celular e ingresa el código de 6 dígitos para GestoPago Bank.',
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '¿Cambiaste de teléfono? Solicita a un administrador el restablecimiento de tu token.',
+              style: TextStyle(color: BankTheme.textHint, fontSize: 11),
             ),
           ],
         ),
       );
     }
+    return _buildVinculacionQr(auth);
+  }
 
-    // SI ES PRIMERA VEZ (ENROLAMIENTO), MUESTRA EL ASISTENTE CON EL QR
+  Widget _buildVinculacionQr(AuthProvider auth) {
     final otpAuthUrl = auth.otpAuthUrl ?? '';
     final totpSecret = auth.totpSecret ?? '';
     final qrImageUrl = otpAuthUrl.isNotEmpty
-        ? 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='
+        ? 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${Uri.encodeComponent(otpAuthUrl)}'
         : null;
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: BankTheme.background,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: BankTheme.border, width: 1.2),
-      ),
+      decoration: _decoracionTarjeta,
       child: Column(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: BankTheme.primary.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.qr_code_scanner_rounded, color: BankTheme.cyanAccent, size: 20),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Vincula Google Authenticator',
-                      style: TextStyle(color: BankTheme.textMain, fontSize: 13, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'Escanea el cdigo QR desde tu app autenticadora',
-                      style: TextStyle(color: BankTheme.textMuted, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          _encabezadoTarjeta(
+            icono: Icons.qr_code_scanner_rounded,
+            color: BankTheme.cyanAccent,
+            titulo: 'Vincula tu app autenticadora',
+            descripcion: '1. Abre Google Authenticator. 2. Escanea este QR. 3. Ingresa el código de 6 dígitos.',
           ),
           const SizedBox(height: 16),
-
           if (qrImageUrl != null)
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
               child: Image.network(
                 qrImageUrl,
                 width: 140,
@@ -616,23 +623,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 fit: BoxFit.contain,
                 loadingBuilder: (_, child, progress) => progress == null
                     ? child
-                    : const SizedBox(
-                        width: 140,
-                        height: 140,
-                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                      ),
+                    : const SizedBox(width: 140, height: 140, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
                 errorBuilder: (_, __, ___) => const SizedBox(
                   width: 140,
                   height: 140,
-                  child: Center(
-                    child: Icon(Icons.broken_image_rounded, color: Colors.grey, size: 40),
-                  ),
+                  child: Center(child: Icon(Icons.broken_image_rounded, color: Colors.grey, size: 40)),
                 ),
               ),
             ),
-
           const SizedBox(height: 14),
-
           if (totpSecret.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -646,30 +645,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const Icon(Icons.key_rounded, size: 14, color: BankTheme.cyanAccent),
                   const SizedBox(width: 8),
-                  Text(
-                    'Clave: ',
-                    style: const TextStyle(
-                      color: BankTheme.cyanAccent,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+                  Flexible(
+                    child: Text(
+                      'Clave manual: $totpSecret',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: BankTheme.cyanAccent, fontSize: 11.5, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                     ),
                   ),
                   const SizedBox(width: 6),
                   InkWell(
                     onTap: () {
                       Clipboard.setData(ClipboardData(text: totpSecret));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Clave secreta copiada al portapapeles'),
-                          backgroundColor: BankTheme.primary,
-                          behavior: SnackBarBehavior.floating,
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
+                      _mostrarMensaje('Clave copiada al portapapeles.', BankTheme.primary);
                     },
                     child: const Padding(
-                      padding: EdgeInsets.all(4.0),
+                      padding: EdgeInsets.all(4),
                       child: Icon(Icons.copy_rounded, size: 14, color: BankTheme.textMuted),
                     ),
                   ),
@@ -681,63 +671,35 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildMetodoSmsOtp(AuthProvider auth) {
+  Widget _buildMetodoCorreo(AuthProvider auth) {
+    final destino = auth.correoEnmascarado ?? 'tu correo registrado';
+    final puedeReenviar = !auth.isLoading && _segundosRestantes <= 0;
+
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: BankTheme.background,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BankTheme.border),
-      ),
+      decoration: _decoracionTarjeta,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: BankTheme.emeraldSuccess.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.mark_email_read_rounded, color: BankTheme.emeraldSuccess, size: 24),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Cdigo por SMS o Correo',
-                      style: TextStyle(color: BankTheme.textMain, fontSize: 13.5, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Enviamos un cdigo temporal a su nmero .',
-                      style: const TextStyle(color: BankTheme.textMuted, fontSize: 11.5),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          _encabezadoTarjeta(
+            icono: Icons.mark_email_read_rounded,
+            color: BankTheme.emeraldSuccess,
+            titulo: 'Código por correo electrónico',
+            descripcion: _codigoCorreoEnviado
+                ? 'Enviamos un código de 6 dígitos a $destino (vigencia de 3 minutos).'
+                : 'Solicitando código de verificación para $destino...',
           ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Vlido por 3 minutos',
-                style: TextStyle(color: BankTheme.textMuted, fontSize: 11),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: puedeReenviar ? _enviarCodigoPorCorreo : null,
+              icon: const Icon(Icons.refresh_rounded, size: 15),
+              label: Text(
+                _segundosRestantes > 0 ? 'Reenviar en ${_segundosRestantes}s' : 'Reenviar código',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),
-              TextButton.icon(
-                onPressed: auth.isLoading ? null : _solicitarReenvioCorreo,
-                icon: const Icon(Icons.refresh_rounded, size: 14, color: BankTheme.cyanAccent),
-                label: const Text(
-                  'Reenviar cdigo',
-                  style: TextStyle(color: BankTheme.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),

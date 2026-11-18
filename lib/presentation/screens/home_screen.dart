@@ -37,8 +37,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       pagoProvider.cargarHistorial();
     });
 
-    // Heartbeat cada 3.5 segundos para comprobar exclusividad de sesión en servidor
-    _sesionHeartbeatTimer = timer_pkg.Timer.periodic(const Duration(milliseconds: 3500), (_) async {
+    // Verificación periódica de sesión única cada 30 segundos para no saturar red ni BD
+    _sesionHeartbeatTimer = timer_pkg.Timer.periodic(const Duration(seconds: 30), (_) async {
       if (!mounted) return;
       try {
         final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -91,18 +91,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     );
                   }
                 } else if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(child: Text(provider.errorMessage ?? 'Ocurrió un error en la transacción')),
-                        ],
-                      ),
-                      backgroundColor: BankTheme.danger,
-                      behavior: SnackBarBehavior.floating,
-                    ),
+                  final msg = provider.errorMessage ?? 'No fue posible completar el pago.';
+                  final esDuplicado = msg.toLowerCase().contains('igual') || msg.toLowerCase().contains('duplicad');
+                  _mostrarToast(
+                    esDuplicado ? 'Pago duplicado prevenido' : 'No se pudo completar el pago',
+                    msg,
+                    esAdvertencia: esDuplicado,
                   );
                 }
               },
@@ -111,6 +105,87 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         );
       },
     );
+  }
+
+  void _mostrarToast(String titulo, String mensaje, {bool esAdvertencia = false}) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+    final color = esAdvertencia ? BankTheme.warning : BankTheme.danger;
+    final icono = esAdvertencia ? Icons.shield_outlined : Icons.error_outline_rounded;
+
+    entry = OverlayEntry(
+      builder: (ctx) => Positioned(
+        top: 24,
+        right: 24,
+        left: ResponsiveLayout.isMobile(ctx) ? 24 : null,
+        child: Material(
+          color: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: BankTheme.surfaceElevated,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: color.withOpacity(0.65), width: 1.4),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.45),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icono, color: color, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          titulo,
+                          style: const TextStyle(color: BankTheme.textMain, fontSize: 13.5, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          mensaje,
+                          style: const TextStyle(color: BankTheme.textMuted, fontSize: 12, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () {
+                      if (entry.mounted) entry.remove();
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(Icons.close_rounded, color: BankTheme.textMuted, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(entry);
+    Future.delayed(const Duration(seconds: 6), () {
+      if (entry.mounted) entry.remove();
+    });
   }
 
   void _verTicket(int folio) async {

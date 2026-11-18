@@ -133,17 +133,46 @@ class PagoProvider with ChangeNotifier {
       return res;
     } catch (e) {
       _isProcessingPago = false;
-      String msg = 'No fue posible completar la transacción.';
-      if (e is DioException && e.response?.data != null) {
-        final data = e.response!.data;
+      int? statusCode;
+      String rawMsg = '';
+      if (e is DioException) {
+        statusCode = e.response?.statusCode;
+        final data = e.response?.data;
         if (data is Map && data['mensaje'] != null) {
-          msg = data['mensaje'].toString();
+          rawMsg = data['mensaje'].toString();
         }
       }
-      _errorMessage = msg;
+      if (statusCode == 409) {
+        cargarHistorial();
+        cargarCuentas();
+      }
+      _errorMessage = _traducirErrorPago(statusCode, rawMsg);
       notifyListeners();
       return null;
     }
+  }
+
+  String _traducirErrorPago(int? statusCode, String rawMsg) {
+    final lower = rawMsg.toLowerCase();
+    if (statusCode == 409 || lower.contains('identica') || lower.contains('duplicad')) {
+      return 'Ya se registró un pago igual hace unos segundos. Por tu seguridad bloqueamos el segundo cargo; revisa tus movimientos o espera un minuto para repetirlo.';
+    }
+    if (lower.contains('saldo insuficiente')) {
+      return 'Saldo insuficiente en tu cuenta para cubrir el monto de este pago.';
+    }
+    if (lower.contains('inactiva') || lower.contains('bloqueada') || lower.contains('cancelada')) {
+      return 'Tu cuenta no se encuentra activa. Actívala para poder realizar pagos.';
+    }
+    if (lower.contains('pin') || lower.contains('contraseña') || statusCode == 401) {
+      return 'El PIN transaccional es incorrecto. Verifica e intenta de nuevo.';
+    }
+    if (statusCode == 503 || lower.contains('proveedor no recibio')) {
+      return 'El proveedor del servicio no respondió a tiempo. No se aplicó ningún cargo a tu saldo.';
+    }
+    if (rawMsg.isNotEmpty) {
+      return rawMsg;
+    }
+    return 'No fue posible completar el pago. Verifica tu conexión e intenta nuevamente.';
   }
 
   Future<void> cargarHistorial() async {

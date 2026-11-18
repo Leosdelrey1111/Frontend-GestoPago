@@ -1,7 +1,10 @@
 class ApiConstants {
-  // En emulador Android usar http://10.0.2.2:8080
-  // En Flutter Web / Dispositivo local usar http://localhost:8080 o IP de red
-  static const String baseUrl = 'http://localhost:8080';
+  // En desarrollo local usa http://localhost:8080; en producción pasar:
+  // --dart-define=API_URL=https://tu-backend.up.railway.app
+  static const String baseUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'http://localhost:8080',
+  );
 
   // Auth & 2FA
   static const String login = '/auth/login';

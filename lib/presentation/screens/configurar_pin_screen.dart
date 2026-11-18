@@ -14,6 +14,8 @@ class ConfigurarPinScreen extends StatefulWidget {
 class _ConfigurarPinScreenState extends State<ConfigurarPinScreen> {
   final TextEditingController _pinController = TextEditingController();
   final TextEditingController _confirmPinController = TextEditingController();
+  bool _obscurePin = true;
+  bool _obscureConfirmPin = true;
   String? _errorLocal;
 
   @override
@@ -119,7 +121,7 @@ class _ConfigurarPinScreenState extends State<ConfigurarPinScreen> {
                   ),
                 TextField(
                   controller: _pinController,
-                  obscureText: true,
+                  obscureText: _obscurePin,
                   maxLength: 4,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -134,6 +136,10 @@ class _ConfigurarPinScreenState extends State<ConfigurarPinScreen> {
                     counterText: '',
                     labelText: 'Ingresa 4 dígitos',
                     labelStyle: const TextStyle(color: BankTheme.textMuted, fontSize: 13, letterSpacing: 0),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscurePin ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: BankTheme.textHint, size: 20),
+                      onPressed: () => setState(() => _obscurePin = !_obscurePin),
+                    ),
                     filled: true,
                     fillColor: BankTheme.background,
                     border: OutlineInputBorder(
@@ -149,7 +155,7 @@ class _ConfigurarPinScreenState extends State<ConfigurarPinScreen> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: _confirmPinController,
-                  obscureText: true,
+                  obscureText: _obscureConfirmPin,
                   maxLength: 4,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -164,6 +170,10 @@ class _ConfigurarPinScreenState extends State<ConfigurarPinScreen> {
                     counterText: '',
                     labelText: 'Confirma tu PIN',
                     labelStyle: const TextStyle(color: BankTheme.textMuted, fontSize: 13, letterSpacing: 0),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscureConfirmPin ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: BankTheme.textHint, size: 20),
+                      onPressed: () => setState(() => _obscureConfirmPin = !_obscureConfirmPin),
+                    ),
                     filled: true,
                     fillColor: BankTheme.background,
                     border: OutlineInputBorder(

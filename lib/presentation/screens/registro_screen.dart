@@ -17,12 +17,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _correoController = TextEditingController();
   final _telefonoController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _pinController = TextEditingController();
-  final _saldoController = TextEditingController(text: '2000.00');
+  final _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
   bool _obscurePass = true;
-  bool _obscurePin = true;
+  bool _obscureConfirmPass = true;
   String? _errorMessage;
   final ApiService _apiService = ApiService();
 
@@ -33,8 +32,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _correoController.dispose();
     _telefonoController.dispose();
     _passwordController.dispose();
-    _pinController.dispose();
-    _saldoController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -53,8 +51,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
         correo: _correoController.text.trim(),
         telefono: _telefonoController.text.trim(),
         password: _passwordController.text.trim(),
-        pin: _pinController.text.trim(),
-        depositoInicial: double.tryParse(_saldoController.text.trim()) ?? 1000.0,
       );
 
       if (mounted) {
@@ -79,7 +75,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Bienvenido/a ${_nombreController.text.trim()}. Su cuenta bancaria y tarjeta de débito han sido activadas con éxito.',
+                  'Bienvenido/a ${_nombreController.text.trim()}. Tu cuenta digital ha sido creada.',
                   style: const TextStyle(color: BankTheme.textMuted, fontSize: 13, height: 1.5),
                 ),
                 const SizedBox(height: 16),
@@ -93,11 +89,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildRowResumen('Número de Cuenta:', res['numeroCuenta'] ?? '7437953543'),
+                      _buildRowResumen('Número de Cuenta:', (res['numeroCuenta'] ?? '').toString()),
                       const SizedBox(height: 6),
-                      _buildRowResumen('Saldo Disponible:', '\$${res['saldoInicial'] ?? _saldoController.text} MXN', valorColor: BankTheme.emeraldSuccess),
+                      _buildRowResumen('Saldo Inicial:', '\$0.00 MXN', valorColor: BankTheme.textMain),
                       const SizedBox(height: 6),
-                      _buildRowResumen('Seguridad:', 'PIN 4 dígitos configurado', valorColor: BankTheme.cyanAccent),
+                      _buildRowResumen('Siguiente paso:', 'Crear PIN al iniciar sesión', valorColor: BankTheme.cyanAccent),
                     ],
                   ),
                 ),
@@ -114,7 +110,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Iniciar Sesión con mi Cuenta', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text('Ir a Iniciar Sesión', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -140,9 +136,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isDesktop = size.width >= 900;
-
     return Scaffold(
       backgroundColor: BankTheme.background,
       appBar: AppBar(
@@ -187,7 +180,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                         children: [
                           Text('Registro de Nuevo Titular', style: TextStyle(color: BankTheme.textMain, fontSize: 19, fontWeight: FontWeight.bold)),
                           SizedBox(height: 2),
-                          Text('Apertura de Cuenta Digital y Tarjeta Débito', style: TextStyle(color: BankTheme.textMuted, fontSize: 12)),
+                          Text('Apertura de Cuenta Digital', style: TextStyle(color: BankTheme.textMuted, fontSize: 12)),
                         ],
                       ),
                     ],
@@ -206,7 +199,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       child: Text(_errorMessage!, style: const TextStyle(color: BankTheme.danger, fontSize: 12.5)),
                     ),
 
-                  // Nombre y Apellido
                   Row(
                     children: [
                       Expanded(
@@ -220,15 +212,23 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   ),
                   const SizedBox(height: 18),
 
-                  _buildInput('Correo Electrónico Institucional', _correoController, Icons.email_outlined,
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (v) => (v == null || !v.contains('@')) ? 'Ingrese un correo válido' : null),
+                  _buildInput(
+                    'Correo Electrónico',
+                    _correoController,
+                    Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (v) => (v == null || !v.contains('@')) ? 'Ingrese un correo válido' : null,
+                  ),
                   const SizedBox(height: 18),
 
-                  _buildInput('Teléfono Móvil (10 dígitos)', _telefonoController, Icons.phone_android_rounded,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
-                      validator: (v) => (v == null || v.trim().length != 10) ? 'Debe tener exactamente 10 dígitos' : null),
+                  _buildInput(
+                    'Teléfono Móvil (10 dígitos)',
+                    _telefonoController,
+                    Icons.phone_android_rounded,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
+                    validator: (v) => (v == null || v.trim().length != 10) ? 'Debe tener exactamente 10 dígitos' : null,
+                  ),
                   const SizedBox(height: 18),
 
                   _buildInput(
@@ -244,30 +244,16 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   ),
                   const SizedBox(height: 18),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildInput(
-                          'PIN Transaccional (4 dígitos)',
-                          _pinController,
-                          Icons.shield_outlined,
-                          obscureText: _obscurePin,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
-                          validator: (v) => (v == null || v.trim().length != 4) ? '4 dígitos' : null,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _buildInput(
-                          'Depósito de Apertura (\$)',
-                          _saldoController,
-                          Icons.attach_money_rounded,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          validator: (v) => (v == null || double.tryParse(v) == null) ? 'Monto inválido' : null,
-                        ),
-                      ),
-                    ],
+                  _buildInput(
+                    'Confirmar Contraseña',
+                    _confirmPasswordController,
+                    Icons.lock_reset_rounded,
+                    obscureText: _obscureConfirmPass,
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscureConfirmPass ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: BankTheme.textHint, size: 20),
+                      onPressed: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
+                    ),
+                    validator: (v) => (v != _passwordController.text) ? 'Las contraseñas no coinciden' : null,
                   ),
                   const SizedBox(height: 32),
 
@@ -283,7 +269,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       ),
                       child: _isLoading
                           ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Completar Registro y Abrir Cuenta', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                          : const Text('Crear Cuenta Digital', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
                   ),
                 ],

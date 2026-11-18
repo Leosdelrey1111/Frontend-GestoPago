@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../core/storage/session_storage.dart';
 import '../../data/services/api_service.dart';
@@ -114,13 +115,13 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> reenviarCodigoCorreo() async {
-    if (_tempEmail == null) return false;
+    if (_tempEmail == null || _preAuthToken == null) return false;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final res = await _apiService.reenviarOtp(_tempEmail!);
+      final res = await _apiService.reenviarOtp(_tempEmail!, _preAuthToken!);
       if (res['correoEnmascarado'] != null) {
         _correoEnmascarado = res['correoEnmascarado'];
       }
@@ -129,10 +130,28 @@ class AuthProvider with ChangeNotifier {
       return true;
     } catch (e) {
       _isLoading = false;
-      _errorMessage = 'No fue posible reenviar el código. Intente nuevamente.';
+      _errorMessage = _mensajeDelServidor(e) ?? 'No fue posible enviar el código. Intenta nuevamente.';
       notifyListeners();
       return false;
     }
+  }
+
+  void limpiarError() {
+    if (_errorMessage == null) return;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  /// Mensaje corto y legible que el backend envía en errores de negocio (400/401), si existe.
+  String? _mensajeDelServidor(Object e) {
+    if (e is DioException) {
+      final data = e.response?.data;
+      final status = e.response?.statusCode;
+      if (data is Map && data['mensaje'] is String && (status == 400 || status == 401)) {
+        return data['mensaje'] as String;
+      }
+    }
+    return null;
   }
 
   Future<bool> verificarOtp(String codigoOtp) async {
