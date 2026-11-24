@@ -32,16 +32,25 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> registrarUsuario({
+    // Paso 1
     required String nombre,
     String? segundoNombre,
     required String apellidoPaterno,
     required String apellidoMaterno,
+    required String fechaNacimiento,
+    // Paso 2
     required String curp,
     required String rfc,
-    required String fechaNacimiento,
-    required int codigoPostal,
     required String correo,
     required String telefono,
+    // Paso 3
+    required String calle,
+    required String numeroExterior,
+    String? numeroInterior,
+    required String colonia,
+    required String municipio,
+    required String estado,
+    required int codigoPostal,
     required String password,
   }) async {
     final response = await _dio.post(
@@ -51,12 +60,18 @@ class ApiService {
         'segundoNombre': segundoNombre,
         'apellidoPaterno': apellidoPaterno,
         'apellidoMaterno': apellidoMaterno,
+        'fechaNacimiento': fechaNacimiento,
         'curp': curp,
         'rfc': rfc,
-        'fechaNacimiento': fechaNacimiento,
-        'codigoPostal': codigoPostal,
         'correo': correo,
         'telefono': telefono,
+        'calle': calle,
+        'numeroExterior': numeroExterior,
+        'numeroInterior': numeroInterior,
+        'colonia': colonia,
+        'municipio': municipio,
+        'estado': estado,
+        'codigoPostal': codigoPostal,
         'password': password,
       },
     );
@@ -102,87 +117,43 @@ class ApiService {
     return [];
   }
 
-  Future<TransaccionResponseModel> pagarServicio({
-    required String numeroCuenta,
-    required String idProducto,
-    required String idServicio,
-    required String telefonoOreferencia,
+  Future<PagoResponseModel> pagarServicio({
+    required int catalogoProductoId,
+    required String numeroCuentaOrigen,
+    required String referencia,
     required double monto,
-    required String passwordOPin,
-    String? claveIdempotencia,
+    required String pin,
+    String? idDispositivo,
   }) async {
     final response = await _dio.post(
-      ApiConstants.pagar,
+      ApiConstants.pagos,
       data: {
-        'numeroCuenta': numeroCuenta,
-        'idProducto': idProducto,
-        'idServicio': idServicio,
-        'telefonoOreferencia': telefonoOreferencia,
+        'catalogoProductoId': catalogoProductoId,
+        'numeroCuentaOrigen': numeroCuentaOrigen,
+        'referencia': referencia,
         'monto': monto,
-        'passwordOPin': passwordOPin,
-        'claveIdempotencia': claveIdempotencia ?? const Uuid().v4(),
+        'pin': pin,
+        'idDispositivo': idDispositivo ?? const Uuid().v4(),
       },
     );
-    return TransaccionResponseModel.fromJson(response.data);
+    return PagoResponseModel.fromJson(response.data);
   }
 
-  Future<List<TransaccionHistorialModel>> getHistorial({
-    int pagina = 0,
-    int tamano = 20,
-    String? numeroCuenta,
-  }) async {
-    if (numeroCuenta == null || numeroCuenta.isEmpty) {
-      final cuentas = await getMisCuentas();
-      if (cuentas.isNotEmpty) {
-        numeroCuenta = cuentas.first.numeroCuenta;
-      }
-    }
-    if (numeroCuenta == null || numeroCuenta.isEmpty) {
-      return [];
-    }
-    final response = await _dio.post(
-      ApiConstants.historial,
-      data: {
-        'numeroCuenta': numeroCuenta,
-        'limite': tamano,
-      },
-    );
+  Future<List<MovimientoModel>> getMovimientos(String numeroCuenta) async {
+    final response = await _dio.get(ApiConstants.movimientos(numeroCuenta));
     final dynamic data = response.data;
-    if (data is Map && data['data'] is List) {
-      return (data['data'] as List).map((item) => TransaccionHistorialModel.fromJson(item)).toList();
-    } else if (data is List) {
-      return data.map((item) => TransaccionHistorialModel.fromJson(item)).toList();
+    if (data is List) {
+      return data.map((item) => MovimientoModel.fromJson(item)).toList();
     }
     return [];
   }
 
-  Future<TicketModel> getTicket(int folio) async {
-    final response = await _dio.get(ApiConstants.ticket(folio));
-    return TicketModel.fromJson(response.data);
-  }
-
-  Future<void> actualizarPin(String nuevoPin) async {
-    await _dio.post(
-      '/auth/pin',
-      data: {'pin': nuevoPin},
-    );
-  }
-
-  Future<Map<String, dynamic>> verificarSesion() async {
-    final response = await _dio.get('/auth/verificar-sesion');
-    if (response.data is Map<String, dynamic>) {
-      return response.data as Map<String, dynamic>;
+  Future<List<TicketModel>> getTickets(String numeroCuenta) async {
+    final response = await _dio.get(ApiConstants.tickets(numeroCuenta));
+    final dynamic data = response.data;
+    if (data is List) {
+      return data.map((item) => TicketModel.fromJson(item)).toList();
     }
-    return {};
-  }
-
-  Future<void> cambiarEstatusCuenta(String numeroCuenta, String estatus) async {
-    await _dio.patch(
-      '/cuentas/mis-cuentas/estatus',
-      queryParameters: {
-        'numeroCuenta': numeroCuenta,
-        'estatus': estatus,
-      },
-    );
+    return [];
   }
 }
