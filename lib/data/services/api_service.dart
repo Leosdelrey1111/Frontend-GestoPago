@@ -33,7 +33,13 @@ class ApiService {
 
   Future<Map<String, dynamic>> registrarUsuario({
     required String nombre,
+    String? segundoNombre,
     required String apellidoPaterno,
+    required String apellidoMaterno,
+    required String curp,
+    required String rfc,
+    required String fechaNacimiento,
+    required int codigoPostal,
     required String correo,
     required String telefono,
     required String password,
@@ -42,7 +48,13 @@ class ApiService {
       '/auth/registro',
       data: {
         'nombre': nombre,
+        'segundoNombre': segundoNombre,
         'apellidoPaterno': apellidoPaterno,
+        'apellidoMaterno': apellidoMaterno,
+        'curp': curp,
+        'rfc': rfc,
+        'fechaNacimiento': fechaNacimiento,
+        'codigoPostal': codigoPostal,
         'correo': correo,
         'telefono': telefono,
         'password': password,
