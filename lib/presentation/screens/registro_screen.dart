@@ -611,11 +611,16 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   onTap: () => _seleccionarFechaNacimiento(dateBtnCtx),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     decoration: BoxDecoration(
                       color: BankTheme.background,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: BankTheme.border),
+                      border: Border.all(
+                        color: _errorMessage != null && _fechaNacimientoController.text.trim().isEmpty
+                            ? BankTheme.danger
+                            : BankTheme.border,
+                        width: _errorMessage != null && _fechaNacimientoController.text.trim().isEmpty ? 1.5 : 1.0,
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -643,6 +648,14 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   ),
                 ),
               ),
+              if (_errorMessage != null && _fechaNacimientoController.text.trim().isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 6, left: 4),
+                  child: Text(
+                    'Por favor selecciona tu fecha de nacimiento',
+                    style: TextStyle(color: BankTheme.danger, fontSize: 11.5, fontWeight: FontWeight.w500),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 28),

@@ -242,13 +242,13 @@ class _BankCalendarModalState extends State<_BankCalendarModal> {
 
                   // Días de la semana
                   Row(
-                    children: const [
+                    children: [
                       for (final d in ['L', 'M', 'M', 'J', 'V', 'S', 'D'])
                         Expanded(
                           child: Center(
                             child: Text(
                               d,
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: BankTheme.textMuted),
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: BankTheme.textMuted),
                             ),
                           ),
                         ),
