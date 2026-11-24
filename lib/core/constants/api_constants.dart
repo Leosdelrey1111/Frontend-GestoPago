@@ -1,9 +1,8 @@
 class ApiConstants {
-  // En desarrollo local usa http://localhost:8080; en producción pasar:
-  // --dart-define=API_URL=https://tu-backend.up.railway.app
+  // En producción apunta a la API desplegada en Render por defecto
   static const String baseUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'http://localhost:8080',
+    defaultValue: 'https://gesto-pago-api.onrender.com',
   );
 
   // Auth & 2FA
