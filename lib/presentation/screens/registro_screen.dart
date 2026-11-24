@@ -534,7 +534,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       if (v == null || v.isEmpty) return 'La contraseña es requerida';
                       if (v.length < 8 || v.length > 12) return 'Debe tener entre 8 y 12 caracteres';
                       if (!RegExp(r'^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!._\-*]).*$').hasMatch(v)) {
-                        return 'Incluya mayúscula, minúscula, número y símbolo (@, #, $, etc.)';
+                        return 'Incluya mayúscula, minúscula, número y símbolo (@, #, \$, etc.)';
                       }
                       return null;
                     },
