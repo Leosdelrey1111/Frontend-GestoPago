@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../core/theme/bank_theme.dart';
 import '../../core/widgets/bank_select_field.dart';
+import '../../core/widgets/bank_date_picker_dialog.dart';
 import '../../data/services/api_service.dart';
 
 class RegistroScreen extends StatefulWidget {
@@ -173,30 +174,17 @@ class _RegistroScreenState extends State<RegistroScreen> {
     return 'CIUDAD_DE_MEXICO';
   }
 
-  Future<void> _seleccionarFechaNacimiento() async {
+  Future<void> _seleccionarFechaNacimiento(BuildContext btnCtx) async {
     final DateTime maxDate = DateTime.now().subtract(const Duration(days: 365 * 18));
     final DateTime initialDate = _fechaNacimientoSeleccionada ?? maxDate;
     final DateTime minDate = DateTime(1920, 1, 1);
 
-    final DateTime? picked = await showDatePicker(
-      context: context,
+    final DateTime? picked = await BankDatePickerDialog.show(
+      anchorContext: btnCtx,
       initialDate: initialDate.isAfter(maxDate) ? maxDate : initialDate,
       firstDate: minDate,
       lastDate: maxDate,
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: BankTheme.primary,
-              onPrimary: Colors.white,
-              surface: BankTheme.surfaceElevated,
-              onSurface: BankTheme.textMain,
-            ),
-            dialogBackgroundColor: BankTheme.surface,
-          ),
-          child: child!,
-        );
-      },
+      title: 'Fecha de Nacimiento (Mayor de 18)',
     );
 
     if (picked != null) {
@@ -550,6 +538,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   _nombreController,
                   Icons.badge_outlined,
                   maxLength: 40,
+                  hintText: 'Ej. Juan',
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Requerido';
                     if (v.trim().length < 3) return 'Mín. 3 caracteres';
@@ -564,7 +553,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   _segundoNombreController,
                   Icons.badge_outlined,
                   maxLength: 40,
-                  hintText: 'Opcional',
+                  hintText: 'Ej. Carlos (Opc.)',
                 ),
               ),
             ],
@@ -578,6 +567,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   _apellidoPaternoController,
                   Icons.person_outline,
                   maxLength: 40,
+                  hintText: 'Ej. Pérez',
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Requerido';
                     if (v.trim().length < 3) return 'Mín. 3 caracteres';
@@ -592,6 +582,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   _apellidoMaternoController,
                   Icons.person_outline,
                   maxLength: 40,
+                  hintText: 'Ej. López',
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Requerido';
                     if (v.trim().length < 3) return 'Mín. 3 caracteres';
@@ -603,34 +594,48 @@ class _RegistroScreenState extends State<RegistroScreen> {
           ),
           const SizedBox(height: 14),
 
-          // Fecha de nacimiento
+          // Fecha de nacimiento personalizada
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Fecha de Nacimiento (Mayor de 18 años) *', style: TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
-              TextFormField(
-                controller: _fechaNacimientoController,
-                readOnly: true,
-                onTap: _seleccionarFechaNacimiento,
-                style: const TextStyle(color: BankTheme.textMain, fontSize: 14),
-                decoration: InputDecoration(
-                  counterText: '',
-                  prefixIcon: const Icon(Icons.calendar_month_outlined, color: BankTheme.primary, size: 19),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.date_range_rounded, color: BankTheme.cyanAccent, size: 20),
-                    onPressed: _seleccionarFechaNacimiento,
+              Builder(
+                builder: (dateBtnCtx) => InkWell(
+                  onTap: () => _seleccionarFechaNacimiento(dateBtnCtx),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                    decoration: BoxDecoration(
+                      color: BankTheme.background,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: BankTheme.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_month_outlined, color: BankTheme.primary, size: 19),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _fechaNacimientoController.text.isNotEmpty
+                                ? _fechaNacimientoController.text
+                                : 'Ej. 1998-05-14',
+                            style: TextStyle(
+                              color: _fechaNacimientoController.text.isNotEmpty
+                                  ? BankTheme.textMain
+                                  : BankTheme.textHint,
+                              fontSize: 13.5,
+                              fontWeight: _fechaNacimientoController.text.isNotEmpty
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.event_available_rounded, color: BankTheme.cyanAccent, size: 18),
+                      ],
+                    ),
                   ),
-                  hintText: 'AAAA-MM-DD',
-                  hintStyle: const TextStyle(color: BankTheme.textHint, fontSize: 13),
-                  filled: true,
-                  fillColor: BankTheme.background,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Seleccione su fecha de nacimiento';
-                  return null;
-                },
               ),
             ],
           ),
@@ -676,6 +681,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   _curpController,
                   Icons.fingerprint_rounded,
                   maxLength: 18,
+                  hintText: 'Ej. HEDB000514HGT...',
                   textCapitalization: TextCapitalization.characters,
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
@@ -698,6 +704,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   _rfcController,
                   Icons.assignment_ind_outlined,
                   maxLength: 13,
+                  hintText: 'Ej. HEDB0005141A0',
                   textCapitalization: TextCapitalization.characters,
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
@@ -722,6 +729,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
             _telefonoController,
             Icons.phone_android_rounded,
             maxLength: 10,
+            hintText: 'Ej. 5512345678',
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
             validator: (v) {
@@ -737,6 +745,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
             _correoController,
             Icons.email_outlined,
             maxLength: 60,
+            hintText: 'Ej. usuario@dominio.com',
             keyboardType: TextInputType.emailAddress,
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'El correo es requerido';
@@ -960,13 +969,15 @@ class _RegistroScreenState extends State<RegistroScreen> {
           ),
           const SizedBox(height: 18),
 
-          // Contraseña
+          // Contraseña con validación en vivo
           _buildInput(
             'Contraseña de Acceso (8-12 car.) *',
             _passwordController,
             Icons.lock_outline_rounded,
             maxLength: 12,
+            hintText: 'Ej. Pass#2026',
             obscureText: _obscurePass,
+            onChanged: (val) => setState(() {}),
             suffixIcon: IconButton(
               icon: Icon(_obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: BankTheme.textHint, size: 20),
               onPressed: () => setState(() => _obscurePass = !_obscurePass),
@@ -975,11 +986,15 @@ class _RegistroScreenState extends State<RegistroScreen> {
               if (v == null || v.isEmpty) return 'La contraseña es requerida';
               if (v.length < 8 || v.length > 12) return 'Debe tener entre 8 y 12 caracteres';
               if (!RegExp(r'^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!._\-*]).*$').hasMatch(v)) {
-                return 'Incluya mayúscula, minúscula, número y símbolo (@, #, \$, etc.)';
+                return 'No cumple con todos los requisitos de seguridad';
               }
               return null;
             },
           ),
+          const SizedBox(height: 8),
+
+          // Chips de validación en vivo de contraseña
+          _buildPasswordRequirementsIndicator(_passwordController.text),
           const SizedBox(height: 14),
 
           _buildInput(
@@ -987,6 +1002,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
             _confirmPasswordController,
             Icons.lock_reset_rounded,
             maxLength: 12,
+            hintText: 'Repite tu contraseña',
             obscureText: _obscureConfirmPass,
             suffixIcon: IconButton(
               icon: Icon(_obscureConfirmPass ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: BankTheme.textHint, size: 20),
@@ -1058,6 +1074,67 @@ class _RegistroScreenState extends State<RegistroScreen> {
     );
   }
 
+  Widget _buildPasswordRequirementsIndicator(String pass) {
+    final hasMinLength = pass.length >= 8 && pass.length <= 12;
+    final hasUpper = RegExp(r'[A-Z]').hasMatch(pass);
+    final hasLower = RegExp(r'[a-z]').hasMatch(pass);
+    final hasDigit = RegExp(r'[0-9]').hasMatch(pass);
+    final hasSymbol = RegExp(r'[@#$%^&+=!._\-*]').hasMatch(pass);
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: BankTheme.background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: BankTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Requisitos de seguridad (8-12 car.):',
+            style: TextStyle(color: BankTheme.textMuted, fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              _buildReqChip('8-12 caracteres', hasMinLength),
+              _buildReqChip('Mayúscula (A-Z)', hasUpper),
+              _buildReqChip('Minúscula (a-z)', hasLower),
+              _buildReqChip('Número (0-9)', hasDigit),
+              _buildReqChip('Símbolo (@,#,\$, etc.)', hasSymbol),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReqChip(String label, bool cumplido) {
+    final color = cumplido ? BankTheme.emeraldSuccess : BankTheme.textHint;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          cumplido ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+          color: color,
+          size: 13,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: cumplido ? BankTheme.textMain : BankTheme.textHint,
+            fontSize: 10.5,
+            fontWeight: cumplido ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildInput(
     String label,
     TextEditingController controller,
@@ -1069,12 +1146,16 @@ class _RegistroScreenState extends State<RegistroScreen> {
     String? hintText,
     TextCapitalization textCapitalization = TextCapitalization.none,
     List<TextInputFormatter>? inputFormatters,
+    ValueChanged<String>? onChanged,
     String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: const TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
@@ -1083,16 +1164,23 @@ class _RegistroScreenState extends State<RegistroScreen> {
           maxLength: maxLength,
           textCapitalization: textCapitalization,
           inputFormatters: inputFormatters,
+          onChanged: onChanged,
           style: const TextStyle(color: BankTheme.textMain, fontSize: 14),
           decoration: InputDecoration(
             counterText: '',
-            prefixIcon: Icon(icon, color: BankTheme.primary, size: 19),
+            prefixIcon: Container(
+              width: 44,
+              alignment: Alignment.center,
+              child: Icon(icon, color: BankTheme.primary, size: 19),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             suffixIcon: suffixIcon,
             hintText: hintText,
             hintStyle: const TextStyle(color: BankTheme.textHint, fontSize: 13),
+            errorMaxLines: 2,
             filled: true,
             fillColor: BankTheme.background,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           ),
           validator: validator,
         ),

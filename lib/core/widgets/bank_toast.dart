@@ -41,9 +41,8 @@ class BankToast {
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (ctx) {
-        final topPadding = MediaQuery.of(ctx).padding.top;
         return Positioned(
-          top: topPadding + 10,
+          bottom: 24,
           right: ResponsiveLayout.isMobile(ctx) ? 16 : 24,
           left: ResponsiveLayout.isMobile(ctx) ? 16 : null,
           child: Material(
@@ -58,7 +57,7 @@ class BankToast {
                   return Opacity(
                     opacity: val,
                     child: Transform.translate(
-                      offset: Offset(0, (1 - val) * -16),
+                      offset: Offset(0, (1 - val) * 16),
                       child: child,
                     ),
                   );

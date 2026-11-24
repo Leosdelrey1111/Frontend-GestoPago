@@ -37,87 +37,11 @@ class _PagoModalState extends State<PagoModal> {
 
   String? _cuentaSeleccionada;
   bool _enPasoPin = false;
+  String? _alertaSaldoInsuficiente;
 
   void _mostrarToast(String titulo, String mensaje, {bool esAdvertencia = false}) {
-    final overlay = Overlay.of(context);
-    late OverlayEntry entry;
-    final color = esAdvertencia ? BankTheme.warning : BankTheme.danger;
-    final icono = esAdvertencia ? Icons.shield_outlined : Icons.error_outline_rounded;
-
-    entry = OverlayEntry(
-      builder: (ctx) => Positioned(
-        top: 24,
-        right: 24,
-        left: 24,
-        child: Material(
-          color: Colors.transparent,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: BankTheme.surfaceElevated,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: color.withOpacity(0.65), width: 1.4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.45),
-                      blurRadius: 24,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(icono, color: color, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            titulo,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            mensaje,
-                            style: TextStyle(
-                              color: BankTheme.textMuted.withOpacity(0.9),
-                              fontSize: 12.5,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    overlay.insert(entry);
-    Future.delayed(const Duration(seconds: 4), () {
-      if (entry.mounted) entry.remove();
+    setState(() {
+      _alertaSaldoInsuficiente = '$titulo: $mensaje';
     });
   }
 
@@ -285,7 +209,34 @@ class _PagoModalState extends State<PagoModal> {
                   // Contenido Dinámico (Paso 1 o Paso 2 PIN)
                   Padding(
                     padding: const EdgeInsets.all(24.0),
-                    child: _enPasoPin ? _buildPaso2Pin() : _buildPaso1(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_alertaSaldoInsuficiente != null)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 18),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: BankTheme.warning.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: BankTheme.warning.withOpacity(0.5)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.shield_outlined, color: BankTheme.warning, size: 20),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    _alertaSaldoInsuficiente!,
+                                    style: const TextStyle(color: BankTheme.warning, fontSize: 12, height: 1.3, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        _enPasoPin ? _buildPaso2Pin() : _buildPaso1(),
+                      ],
+                    ),
                   ),
                 ],
               ),
