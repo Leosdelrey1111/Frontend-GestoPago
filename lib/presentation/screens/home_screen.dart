@@ -259,69 +259,77 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildTopAppBar(AuthProvider auth, PagoProvider pago, bool isMobile) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 32, vertical: 14),
-      decoration: BoxDecoration(
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 14 : 32,
+        vertical: isMobile ? 10 : 14,
+      ),
+      decoration: const BoxDecoration(
         color: BankTheme.surface,
-        border: const Border(bottom: BorderSide(color: BankTheme.borderSubtle)),
+        border: Border(bottom: BorderSide(color: BankTheme.borderSubtle)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  gradient: BankTheme.brandGradient,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: BankTheme.glowShadow(BankTheme.primary),
-                ),
-                child: const Icon(Icons.account_balance_rounded, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'GESTOPAGO BANK',
-                    style: TextStyle(
-                      color: BankTheme.textMain,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  Text(
-                    'Portal Transaccional Corporativo • Cifrado AES-256',
-                    style: TextStyle(
-                      color: BankTheme.textMuted.withOpacity(0.8),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          Container(
+            padding: EdgeInsets.all(isMobile ? 7 : 9),
+            decoration: BoxDecoration(
+              gradient: BankTheme.brandGradient,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: BankTheme.glowShadow(BankTheme.primary),
+            ),
+            child: Icon(
+              Icons.account_balance_rounded,
+              color: Colors.white,
+              size: isMobile ? 18 : 20,
+            ),
           ),
-          OutlinedButton.icon(
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'GESTOPAGO BANK',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: BankTheme.textMain,
+                    fontSize: isMobile ? 14 : 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                Text(
+                  isMobile ? 'Portal Móvil Seguro' : 'Portal Transaccional Corporativo • Cifrado AES-256',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: BankTheme.textMuted.withOpacity(0.8),
+                    fontSize: isMobile ? 10 : 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'Cerrar Sesión',
+            icon: const Icon(Icons.logout_rounded, size: 20, color: BankTheme.danger),
+            style: IconButton.styleFrom(
+              backgroundColor: BankTheme.danger.withOpacity(0.12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: BankTheme.danger.withOpacity(0.3)),
+              ),
+              padding: const EdgeInsets.all(8),
+            ),
             onPressed: () async {
               await auth.cerrarSesion();
               if (context.mounted) {
                 Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
               }
             },
-            icon: const Icon(Icons.logout_rounded, size: 16, color: BankTheme.danger),
-            label: isMobile
-                ? const SizedBox.shrink()
-                : const Text(
-                    'Cerrar Sesión',
-                    style: TextStyle(color: BankTheme.danger, fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: BankTheme.danger.withOpacity(0.35)),
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 16, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
           ),
         ],
       ),
@@ -437,9 +445,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.grid_view_rounded, size: 17),
-                SizedBox(width: 8),
-                Text('Catálogo de Pagos'),
+                Icon(Icons.grid_view_rounded, size: 16),
+                SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    'Catálogo',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -448,9 +462,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.receipt_long_rounded, size: 17),
-                SizedBox(width: 8),
-                Text('Movimientos y Tickets'),
+                Icon(Icons.receipt_long_rounded, size: 16),
+                SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    'Movimientos',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
