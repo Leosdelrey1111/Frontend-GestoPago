@@ -111,7 +111,7 @@ class TicketDialog extends StatelessWidget {
 
                         // Desglose del Recibo
                         _buildRow('Folio Operación', '#${ticket.folio}'),
-                        _buildRow('Número Autorización', ticket.autorizacionProveedor ?? 'AUT-SIMULADA'),
+                        _buildRow('Número Autorización', ticket.autorizacionProveedor),
                         _buildRow('Referencia / Teléfono', ticket.referencia),
                         _buildRow('Comisión Proveedor', '\$${ticket.comision.toStringAsFixed(2)} MXN'),
                         _buildRow('Fecha y Hora', ticket.fechaHora),

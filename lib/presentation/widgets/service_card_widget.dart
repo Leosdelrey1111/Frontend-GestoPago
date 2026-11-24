@@ -44,8 +44,7 @@ class ServiceCardWidget extends StatelessWidget {
               children: [
                 // Contenedor del Logo con fondo blanco para preservar la identidad gráfica original
                 Container(
-                  width: 58,
-                  height: 58,
+                  width: 50, height: 50,
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -67,7 +66,7 @@ class ServiceCardWidget extends StatelessWidget {
                         )
                       : const Icon(Icons.bolt_rounded, size: 30, color: BankTheme.primary),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
                 // Nombre del Producto
                 Text(
@@ -76,7 +75,7 @@ class ServiceCardWidget extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: BankTheme.textMain,
                     height: 1.2,
@@ -123,7 +122,7 @@ class ServiceCardWidget extends StatelessWidget {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        esMontoFijo ? '\$${precio!.toStringAsFixed(2)}' : 'Monto Abierto',
+                        esMontoFijo ? '\$${precio.toStringAsFixed(2)}' : 'Monto Abierto',
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,

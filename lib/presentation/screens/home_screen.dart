@@ -626,19 +626,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         style: TextStyle(color: BankTheme.textMuted, fontSize: 13),
                       ),
                     )
-                  : GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: isMobile ? 2 : 4,
-                        childAspectRatio: 0.88,
-                        crossAxisSpacing: 14,
-                        mainAxisSpacing: 14,
-                      ),
-                      itemCount: catalogo.length,
-                      itemBuilder: (_, index) {
-                        final prod = catalogo[index];
-                        return ServiceCardWidget(
-                          producto: prod,
-                          onTap: () => _abrirModalPago(prod),
+                  : LayoutBuilder(
+                      builder: (ctx, constraints) {
+                        final width = constraints.maxWidth;
+                        final int cols = width < 360 ? 2 : width < 600 ? 2 : width < 900 ? 3 : width < 1200 ? 4 : 5;
+                        final double ratio = width < 360 ? 0.74 : width < 420 ? 0.78 : 0.85;
+                        return GridView.builder(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: cols,
+                            childAspectRatio: ratio,
+                            crossAxisSpacing: width < 400 ? 10 : 14,
+                            mainAxisSpacing: width < 400 ? 10 : 14,
+                          ),
+                          itemCount: catalogo.length,
+                          itemBuilder: (_, index) {
+                            final prod = catalogo[index];
+                            return ServiceCardWidget(
+                              producto: prod,
+                              onTap: () => _abrirModalPago(prod),
+                            );
+                          },
                         );
                       },
                     ),

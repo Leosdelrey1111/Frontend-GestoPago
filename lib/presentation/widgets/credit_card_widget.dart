@@ -27,8 +27,7 @@ class _CreditCardWidgetState extends State<CreditCardWidget> {
     final estatus = widget.cuenta?.estatus ?? 'ACTIVA';
 
     return Container(
-      constraints: const BoxConstraints(maxWidth: 440),
-      height: 220,
+      constraints: const BoxConstraints(minHeight: 200, maxHeight: 220, maxWidth: 440),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
