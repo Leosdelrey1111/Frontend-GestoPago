@@ -85,7 +85,7 @@ class TicketDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          ticket.titulo.isNotEmpty ? ticket.titulo : 'Comprobante Digital GestoPago',
+                          ticket.nombreServicio.isNotEmpty ? ticket.nombreServicio : 'Comprobante Digital GestoPago',
                           style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11.5),
                         ),
                       ],

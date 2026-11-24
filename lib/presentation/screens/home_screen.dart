@@ -645,22 +645,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           final double ratio = width < 360 ? 0.74 : width < 420 ? 0.78 : 0.85;
                           return GridView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: cols,
-                            childAspectRatio: ratio,
-                            crossAxisSpacing: width < 400 ? 10 : 14,
-                            mainAxisSpacing: width < 400 ? 10 : 14,
-                          ),
-                          itemCount: catalogo.length,
-                          itemBuilder: (_, index) {
-                            final prod = catalogo[index];
-                            return ServiceCardWidget(
-                              producto: prod,
-                              onTap: () => _abrirModalPago(prod),
-                            );
-                          },
-                        );
-                      },
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: cols,
+                              childAspectRatio: ratio,
+                              crossAxisSpacing: width < 400 ? 10 : 14,
+                              mainAxisSpacing: width < 400 ? 10 : 14,
+                            ),
+                            itemCount: catalogo.length,
+                            itemBuilder: (_, index) {
+                              final prod = catalogo[index];
+                              return ServiceCardWidget(
+                                producto: prod,
+                                onTap: () => _abrirModalPago(prod),
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ),
         ),
       ],
@@ -703,70 +704,71 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         itemBuilder: (_, idx) {
           final tx = pago.historial[idx];
           return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: BankTheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: BankTheme.border),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: BankTheme.emeraldSuccess.withOpacity(0.15),
-                  shape: BoxShape.circle,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: BankTheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: BankTheme.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: BankTheme.emeraldSuccess.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_circle_outline, color: BankTheme.emeraldSuccess, size: 22),
                 ),
-                child: const Icon(Icons.check_circle_outline, color: BankTheme.emeraldSuccess, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tx.producto,
+                        style: const TextStyle(color: BankTheme.textMain, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Folio: #${tx.folio} • Aut: ${tx.numAutorizacion ?? "AUT-SIMULADA"}',
+                        style: const TextStyle(color: BankTheme.textMuted, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      tx.producto,
-                      style: const TextStyle(color: BankTheme.textMain, fontSize: 13, fontWeight: FontWeight.bold),
+                      '-\$${tx.monto.toStringAsFixed(2)} MXN',
+                      style: const TextStyle(color: BankTheme.danger, fontSize: 14, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Folio: #${tx.folio} • Aut: ${tx.numAutorizacion ?? "AUT-SIMULADA"}',
-                      style: const TextStyle(color: BankTheme.textMuted, fontSize: 11),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () => _verTicket(tx.folio),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: BankTheme.primary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.receipt_rounded, color: BankTheme.cyanAccent, size: 14),
+                            SizedBox(width: 4),
+                            Text('Ticket', style: TextStyle(color: BankTheme.cyanAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '-\$${tx.monto.toStringAsFixed(2)} MXN',
-                    style: const TextStyle(color: BankTheme.danger, fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 6),
-                  InkWell(
-                    onTap: () => _verTicket(tx.folio),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: BankTheme.primary.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.receipt_rounded, color: BankTheme.cyanAccent, size: 14),
-                          SizedBox(width: 4),
-                          Text('Ticket', style: TextStyle(color: BankTheme.cyanAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
