@@ -198,9 +198,14 @@ class _RegistroScreenState extends State<RegistroScreen> {
   void _avanzarPaso() {
     setState(() => _errorMessage = null);
     if (_currentStep == 0) {
-      if (_formKeyStep0.currentState!.validate()) {
-        setState(() => _currentStep = 1);
+      if (!_formKeyStep0.currentState!.validate()) return;
+      if (_fechaNacimientoController.text.trim().isEmpty) {
+        setState(() {
+          _errorMessage = 'Por favor selecciona tu fecha de nacimiento';
+        });
+        return;
       }
+      setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
       if (_formKeyStep1.currentState!.validate()) {
         setState(() => _currentStep = 2);
@@ -443,12 +448,13 @@ class _RegistroScreenState extends State<RegistroScreen> {
           },
         ),
       ),
-      body: Center(
+      body: Align(
+        alignment: Alignment.topCenter,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 580),
-            padding: const EdgeInsets.all(28),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             decoration: BoxDecoration(
               color: BankTheme.surface,
               borderRadius: BorderRadius.circular(24),
@@ -939,30 +945,30 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 flex: 2,
                 child: _buildInput(
                   'Num. Ext. *',
                   _numeroExteriorController,
-                  Icons.tag_rounded,
-                  maxLength: 12,
-                  hintText: '1234',
+                  null, // Sin icono interior para dar 100% de espacio al número
+                  maxLength: 10,
+                  hintText: '123',
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Requerido';
                     return null;
                   },
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 flex: 2,
                 child: _buildInput(
                   'Num. Int.',
                   _numeroInteriorController,
-                  Icons.apartment_rounded,
-                  maxLength: 12,
-                  hintText: 'Opc.',
+                  null, // Sin icono interior para dar 100% de espacio al número
+                  maxLength: 10,
+                  hintText: '4B (Opc.)',
                 ),
               ),
             ],
@@ -1138,7 +1144,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   Widget _buildInput(
     String label,
     TextEditingController controller,
-    IconData icon, {
+    IconData? icon, {
     bool obscureText = false,
     Widget? suffixIcon,
     TextInputType? keyboardType,
@@ -1168,19 +1174,24 @@ class _RegistroScreenState extends State<RegistroScreen> {
           style: const TextStyle(color: BankTheme.textMain, fontSize: 14),
           decoration: InputDecoration(
             counterText: '',
-            prefixIcon: Container(
-              width: 44,
-              alignment: Alignment.center,
-              child: Icon(icon, color: BankTheme.primary, size: 19),
-            ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            prefixIcon: icon != null
+                ? Container(
+                    width: 38,
+                    alignment: Alignment.center,
+                    child: Icon(icon, color: BankTheme.primary, size: 18),
+                  )
+                : null,
+            prefixIconConstraints: icon != null ? const BoxConstraints(minWidth: 38, minHeight: 44) : null,
             suffixIcon: suffixIcon,
             hintText: hintText,
             hintStyle: const TextStyle(color: BankTheme.textHint, fontSize: 13),
             errorMaxLines: 2,
             filled: true,
             fillColor: BankTheme.background,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: icon != null ? 10 : 12,
+              vertical: 13,
+            ),
           ),
           validator: validator,
         ),
