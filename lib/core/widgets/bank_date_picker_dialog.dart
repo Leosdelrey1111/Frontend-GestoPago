@@ -77,11 +77,16 @@ class _BankCalendarModalState extends State<_BankCalendarModal> {
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
+  static const List<String> _meses = [
+    'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
+  ];
+
   @override
   Widget build(BuildContext context) {
     final firstOfMonth = DateTime(_displayedMonth.year, _displayedMonth.month, 1);
     final startGrid = firstOfMonth.subtract(Duration(days: firstOfMonth.weekday - 1));
-    final monthLabel = DateFormat('MMMM yyyy', 'es_MX').format(_displayedMonth).toUpperCase();
+    final monthLabel = '${_meses[_displayedMonth.month - 1]} ${_displayedMonth.year}';
 
     return Dialog(
       backgroundColor: Colors.transparent,
