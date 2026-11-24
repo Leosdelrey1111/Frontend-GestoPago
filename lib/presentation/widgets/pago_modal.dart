@@ -38,6 +38,89 @@ class _PagoModalState extends State<PagoModal> {
   String? _cuentaSeleccionada;
   bool _enPasoPin = false;
 
+  void _mostrarToast(String titulo, String mensaje, {bool esAdvertencia = false}) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+    final color = esAdvertencia ? BankTheme.warning : BankTheme.danger;
+    final icono = esAdvertencia ? Icons.shield_outlined : Icons.error_outline_rounded;
+
+    entry = OverlayEntry(
+      builder: (ctx) => Positioned(
+        top: 24,
+        right: 24,
+        left: 24,
+        child: Material(
+          color: Colors.transparent,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: BankTheme.surfaceElevated,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: color.withOpacity(0.65), width: 1.4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.45),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(icono, color: color, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            titulo,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            mensaje,
+                            style: TextStyle(
+                              color: BankTheme.textMuted.withOpacity(0.9),
+                              fontSize: 12.5,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(entry);
+    Future.delayed(const Duration(seconds: 4), () {
+      if (entry.mounted) entry.remove();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -60,12 +143,7 @@ class _PagoModalState extends State<PagoModal> {
   void _avanzarAPin() {
     if (!_formKeyPaso1.currentState!.validate()) return;
     if (_cuentaSeleccionada == null || _cuentaSeleccionada!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Seleccione una cuenta de débito para el cargo'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _mostrarToast('Cuenta requerida', 'Seleccione una cuenta de débito para realizar el cargo.', esAdvertencia: true);
       return;
     }
 
@@ -75,13 +153,7 @@ class _PagoModalState extends State<PagoModal> {
       orElse: () => widget.cuentas.first,
     );
     if (cta.estatus != 'ACTIVA') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('La cuenta se encuentra ${cta.estatus}. Desbloquéela antes de pagar.'),
-          backgroundColor: BankTheme.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _mostrarToast('Cuenta bloqueada', 'La cuenta se encuentra ${cta.estatus}. Desbloquéela antes de pagar.');
       return;
     }
 
@@ -90,13 +162,7 @@ class _PagoModalState extends State<PagoModal> {
 
   void _ejecutarPagoFinal() {
     if (_pinController.text.length < 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ingrese su PIN transaccional de 4 dígitos'),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _mostrarToast('PIN de seguridad incompleto', 'Ingrese su PIN de seguridad de 4 dígitos para autorizar el cargo.', esAdvertencia: true);
       return;
     }
 

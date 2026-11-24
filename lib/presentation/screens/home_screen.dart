@@ -91,10 +91,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     );
                   }
                 } else if (mounted) {
+                  provider.cargarHistorial();
+                  provider.cargarCuentas();
                   final msg = provider.errorMessage ?? 'No fue posible completar el pago.';
                   final esDuplicado = msg.toLowerCase().contains('igual') || msg.toLowerCase().contains('duplicad');
                   _mostrarToast(
-                    esDuplicado ? 'Pago duplicado prevenido' : 'No se pudo completar el pago',
+                    esDuplicado ? 'Pago duplicado prevenido' : 'Pago rechazado por el proveedor',
                     msg,
                     esAdvertencia: esDuplicado,
                   );
@@ -626,12 +628,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         style: TextStyle(color: BankTheme.textMuted, fontSize: 13),
                       ),
                     )
-                  : LayoutBuilder(
-                      builder: (ctx, constraints) {
-                        final width = constraints.maxWidth;
-                        final int cols = width < 360 ? 2 : width < 600 ? 2 : width < 900 ? 3 : width < 1200 ? 4 : 5;
-                        final double ratio = width < 360 ? 0.74 : width < 420 ? 0.78 : 0.85;
-                        return GridView.builder(
+                  : RefreshIndicator(
+                      color: BankTheme.primary,
+                      backgroundColor: BankTheme.surfaceElevated,
+                      onRefresh: () async {
+                        await Future.wait([
+                          pago.cargarCuentas(),
+                          pago.cargarCatalogo(),
+                          pago.cargarHistorial(),
+                        ]);
+                      },
+                      child: LayoutBuilder(
+                        builder: (ctx, constraints) {
+                          final width = constraints.maxWidth;
+                          final int cols = width < 360 ? 2 : width < 600 ? 2 : width < 900 ? 3 : width < 1200 ? 4 : 5;
+                          final double ratio = width < 360 ? 0.74 : width < 420 ? 0.78 : 0.85;
+                          return GridView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: cols,
                             childAspectRatio: ratio,
@@ -674,12 +687,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       );
     }
 
-    return ListView.separated(
-      itemCount: pago.historial.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, idx) {
-        final tx = pago.historial[idx];
-        return Container(
+    return RefreshIndicator(
+      color: BankTheme.primary,
+      backgroundColor: BankTheme.surfaceElevated,
+      onRefresh: () async {
+        await Future.wait([
+          pago.cargarCuentas(),
+          pago.cargarHistorial(),
+        ]);
+      },
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: pago.historial.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (_, idx) {
+          final tx = pago.historial[idx];
+          return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: BankTheme.surface,

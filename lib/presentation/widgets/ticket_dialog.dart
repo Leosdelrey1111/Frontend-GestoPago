@@ -9,6 +9,24 @@ class TicketDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final esRechazada = ticket.estatus.toUpperCase().contains('RECHAZAD') || 
+                        ticket.estatus.toUpperCase().contains('FALLID');
+    final esPendiente = ticket.estatus.toUpperCase().contains('PENDIENTE') || 
+                        ticket.estatus.toUpperCase().contains('CONCILIA');
+
+    final colorGradiente1 = esRechazada 
+        ? const Color(0xFF842029) 
+        : esPendiente ? const Color(0xFF664D03) : const Color(0xFF0F5132);
+    final colorGradiente2 = esRechazada 
+        ? const Color(0xFFDC3545) 
+        : esPendiente ? const Color(0xFFFFC107) : const Color(0xFF198754);
+    final iconoCabecera = esRechazada 
+        ? Icons.cancel_outlined 
+        : esPendiente ? Icons.hourglass_empty_rounded : Icons.check_circle_outline_rounded;
+    final tituloCabecera = esRechazada 
+        ? 'PAGO RECHAZADO' 
+        : esPendiente ? 'PAGO EN PROCESO' : 'PAGO COMPLETADO';
+
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -34,13 +52,13 @@ class TicketDialog extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Cabecera Verde Exitosa
+                  // Cabecera Dinámica (Verde para éxito, Roja para rechazado)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Color(0xFF0F5132), Color(0xFF198754)],
+                        colors: [colorGradiente1, colorGradiente2],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -53,12 +71,12 @@ class TicketDialog extends StatelessWidget {
                             color: Colors.white.withOpacity(0.2),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 40),
+                          child: Icon(iconoCabecera, color: Colors.white, size: 40),
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          'PAGO COMPLETADO',
-                          style: TextStyle(
+                        Text(
+                          tituloCabecera,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
@@ -67,7 +85,7 @@ class TicketDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Comprobante Digital Fiscal GestoPago',
+                          ticket.titulo.isNotEmpty ? ticket.titulo : 'Comprobante Digital GestoPago',
                           style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11.5),
                         ),
                       ],
@@ -115,7 +133,8 @@ class TicketDialog extends StatelessWidget {
                         _buildRow('Referencia / Teléfono', ticket.referencia),
                         _buildRow('Comisión Proveedor', '\$${ticket.comision.toStringAsFixed(2)} MXN'),
                         _buildRow('Fecha y Hora', ticket.fechaHora),
-                        _buildRow('Estatus', ticket.estatus, valorColor: BankTheme.emeraldSuccess),
+                        _buildRow('Estatus', ticket.estatus, 
+                            valorColor: esRechazada ? BankTheme.danger : (esPendiente ? BankTheme.warning : BankTheme.emeraldSuccess)),
 
                         const SizedBox(height: 16),
                         Divider(height: 1, color: BankTheme.border),
