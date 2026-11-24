@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/bank_theme.dart';
+import '../../core/widgets/bank_toast.dart';
 import '../../data/models/api_models.dart';
 
 class PagoModal extends StatefulWidget {
@@ -43,6 +44,12 @@ class _PagoModalState extends State<PagoModal> {
     setState(() {
       _alertaSaldoInsuficiente = '$titulo: $mensaje';
     });
+    BankToast.mostrar(
+      context,
+      titulo: titulo,
+      mensaje: mensaje,
+      tipo: esAdvertencia ? ToastTipo.advertencia : ToastTipo.error,
+    );
   }
 
   @override
