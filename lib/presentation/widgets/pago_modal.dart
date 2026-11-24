@@ -157,6 +157,16 @@ class _PagoModalState extends State<PagoModal> {
       return;
     }
 
+    final monto = double.tryParse(_montoController.text.trim()) ?? 0.0;
+    if (cta.saldo < monto) {
+      _mostrarToast(
+        'Saldo Insuficiente',
+        'Tu saldo disponible (\$${cta.saldo.toStringAsFixed(2)}) no es suficiente para cubrir este pago de \$${monto.toStringAsFixed(2)}.',
+        esAdvertencia: true,
+      );
+      return;
+    }
+
     setState(() => _enPasoPin = true);
   }
 
