@@ -667,15 +667,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       child: LayoutBuilder(
                         builder: (ctx, constraints) {
                           final width = constraints.maxWidth;
-                          final int cols = width < 360 ? 2 : width < 600 ? 2 : width < 900 ? 3 : width < 1200 ? 4 : 5;
-                          final double ratio = width < 360 ? 0.74 : width < 420 ? 0.78 : 0.85;
+                          // Disposición compacta y estilizada:
+                          // Móvil (<480px): 3 columnas ajustadas y proporcionadas
+                          // Tablets (<800px): 4 columnas
+                          // Desktop (<1200px): 5 columnas
+                          // Pantallas grandes: 6 columnas
+                          final int cols = width < 480 ? 3 : width < 800 ? 4 : width < 1100 ? 5 : 6;
+                          final double ratio = width < 480 ? 0.82 : 0.92;
                           return GridView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: cols,
                               childAspectRatio: ratio,
-                              crossAxisSpacing: width < 400 ? 10 : 14,
-                              mainAxisSpacing: width < 400 ? 10 : 14,
+                              crossAxisSpacing: width < 480 ? 8 : 12,
+                              mainAxisSpacing: width < 480 ? 8 : 12,
                             ),
                             itemCount: catalogo.length,
                             itemBuilder: (_, index) {

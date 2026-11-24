@@ -20,39 +20,40 @@ class ServiceCardWidget extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: BankTheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: BankTheme.border, width: 1.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: BankTheme.border.withOpacity(0.7), width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           hoverColor: BankTheme.primary.withOpacity(0.08),
           splashColor: BankTheme.cyanAccent.withOpacity(0.12),
           child: Padding(
-            padding: const EdgeInsets.all(14.0),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Contenedor del Logo con fondo blanco para preservar la identidad gráfica original
+                // Logo compacto
                 Container(
-                  width: 50, height: 50,
-                  padding: const EdgeInsets.all(6),
+                  width: 42,
+                  height: 42,
+                  padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.12),
-                        blurRadius: 8,
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
                     ],
@@ -62,54 +63,54 @@ class ServiceCardWidget extends StatelessWidget {
                           producto.urlLogo!,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.bolt_rounded, size: 30, color: BankTheme.primary),
+                              const Icon(Icons.bolt_rounded, size: 24, color: BankTheme.primary),
                         )
-                      : const Icon(Icons.bolt_rounded, size: 30, color: BankTheme.primary),
+                      : const Icon(Icons.bolt_rounded, size: 24, color: BankTheme.primary),
                 ),
-                const SizedBox(height: 8),
 
-                // Nombre del Producto
-                Text(
-                  producto.nombreProducto,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: BankTheme.textMain,
-                    height: 1.2,
-                  ),
+                // Textos de Producto y Categoría
+                Column(
+                  children: [
+                    Text(
+                      producto.nombreProducto,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: BankTheme.textMain,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      producto.servicio,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: BankTheme.textMuted,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
 
-                // Categoría / Proveedor
-                Text(
-                  producto.servicio,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w500,
-                    color: BankTheme.textMuted,
-                  ),
-                ),
-                const Spacer(),
-
-                // Tag de Precio o Monto Libre
+                // Badge de Precio o Monto Libre más estilizado y compacto
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
                   decoration: BoxDecoration(
                     color: esMontoFijo
-                        ? BankTheme.primary.withOpacity(0.18)
-                        : Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(10),
+                        ? BankTheme.primary.withOpacity(0.14)
+                        : Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: esMontoFijo
-                          ? BankTheme.primary.withOpacity(0.4)
-                          : Colors.white.withOpacity(0.08),
+                          ? BankTheme.primary.withOpacity(0.35)
+                          : Colors.white.withOpacity(0.06),
                     ),
                   ),
                   child: Row(
@@ -117,14 +118,14 @@ class ServiceCardWidget extends StatelessWidget {
                     children: [
                       Icon(
                         esMontoFijo ? Icons.sell_outlined : Icons.edit_note_rounded,
-                        size: 13,
+                        size: 11,
                         color: esMontoFijo ? BankTheme.cyanAccent : BankTheme.textMuted,
                       ),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 4),
                       Text(
-                        esMontoFijo ? '\$${precio.toStringAsFixed(2)}' : 'Monto Abierto',
+                        esMontoFijo ? '\$${precio.toStringAsFixed(2)}' : 'Libre',
                         style: TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: esMontoFijo ? BankTheme.cyanAccent : BankTheme.textMain,
                         ),
