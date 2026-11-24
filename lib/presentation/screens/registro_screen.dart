@@ -198,13 +198,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
   void _avanzarPaso() {
     setState(() => _errorMessage = null);
     if (_currentStep == 0) {
-      if (!_formKeyStep0.currentState!.validate()) return;
-      if (_fechaNacimientoController.text.trim().isEmpty) {
-        setState(() {
-          _errorMessage = 'Por favor selecciona tu fecha de nacimiento';
-        });
-        return;
-      }
+      final formValid = _formKeyStep0.currentState!.validate();
+      if (!formValid) return;
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
       if (_formKeyStep1.currentState!.validate()) {
@@ -453,7 +448,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 580),
+            constraints: const BoxConstraints(maxWidth: 480),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
             decoration: BoxDecoration(
               color: BankTheme.surface,
@@ -600,63 +595,75 @@ class _RegistroScreenState extends State<RegistroScreen> {
           ),
           const SizedBox(height: 14),
 
-          // Fecha de nacimiento personalizada
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Fecha de Nacimiento (Mayor de 18 años) *', style: TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Builder(
-                builder: (dateBtnCtx) => InkWell(
-                  onTap: () => _seleccionarFechaNacimiento(dateBtnCtx),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: BankTheme.background,
+          // Fecha de nacimiento personalizada integrada en el Form
+          FormField<String>(
+            validator: (_) {
+              if (_fechaNacimientoController.text.trim().isEmpty) {
+                return 'Requerido';
+              }
+              return null;
+            },
+            builder: (fieldState) {
+              final hasError = fieldState.hasError;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Fecha de Nacimiento (Mayor de 18 años) *', style: TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Builder(
+                    builder: (dateBtnCtx) => InkWell(
+                      onTap: () async {
+                        await _seleccionarFechaNacimiento(dateBtnCtx);
+                        fieldState.didChange(_fechaNacimientoController.text);
+                      },
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _errorMessage != null && _fechaNacimientoController.text.trim().isEmpty
-                            ? BankTheme.danger
-                            : BankTheme.border,
-                        width: _errorMessage != null && _fechaNacimientoController.text.trim().isEmpty ? 1.5 : 1.0,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_month_outlined, color: BankTheme.primary, size: 19),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _fechaNacimientoController.text.isNotEmpty
-                                ? _fechaNacimientoController.text
-                                : 'Ej. 1998-05-14',
-                            style: TextStyle(
-                              color: _fechaNacimientoController.text.isNotEmpty
-                                  ? BankTheme.textMain
-                                  : BankTheme.textHint,
-                              fontSize: 13.5,
-                              fontWeight: _fechaNacimientoController.text.isNotEmpty
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: BankTheme.background,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: hasError ? BankTheme.danger : BankTheme.border,
+                            width: hasError ? 1.5 : 1.0,
                           ),
                         ),
-                        const Icon(Icons.event_available_rounded, color: BankTheme.cyanAccent, size: 18),
-                      ],
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_month_outlined, color: hasError ? BankTheme.danger : BankTheme.primary, size: 19),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _fechaNacimientoController.text.isNotEmpty
+                                    ? _fechaNacimientoController.text
+                                    : 'Ej. 1998-05-14',
+                                style: TextStyle(
+                                  color: _fechaNacimientoController.text.isNotEmpty
+                                      ? BankTheme.textMain
+                                      : BankTheme.textHint,
+                                  fontSize: 13.5,
+                                  fontWeight: _fechaNacimientoController.text.isNotEmpty
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                            Icon(Icons.event_available_rounded, color: hasError ? BankTheme.danger : BankTheme.cyanAccent, size: 18),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              if (_errorMessage != null && _fechaNacimientoController.text.trim().isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 6, left: 4),
-                  child: Text(
-                    'Por favor selecciona tu fecha de nacimiento',
-                    style: TextStyle(color: BankTheme.danger, fontSize: 11.5, fontWeight: FontWeight.w500),
-                  ),
-                ),
-            ],
+                  if (hasError)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, left: 4),
+                      child: Text(
+                        fieldState.errorText ?? 'Requerido',
+                        style: const TextStyle(color: BankTheme.danger, fontSize: 11.5, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 28),
 
