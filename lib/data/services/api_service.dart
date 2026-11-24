@@ -32,18 +32,15 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> registrarUsuario({
-    // Paso 1
     required String nombre,
     String? segundoNombre,
     required String apellidoPaterno,
     required String apellidoMaterno,
     required String fechaNacimiento,
-    // Paso 2
     required String curp,
     required String rfc,
     required String correo,
     required String telefono,
-    // Paso 3
     required String calle,
     required String numeroExterior,
     String? numeroInterior,
@@ -117,43 +114,87 @@ class ApiService {
     return [];
   }
 
-  Future<PagoResponseModel> pagarServicio({
-    required int catalogoProductoId,
-    required String numeroCuentaOrigen,
-    required String referencia,
+  Future<TransaccionResponseModel> pagarServicio({
+    required String numeroCuenta,
+    required String idProducto,
+    required String idServicio,
+    required String telefonoOreferencia,
     required double monto,
-    required String pin,
-    String? idDispositivo,
+    required String passwordOPin,
+    String? claveIdempotencia,
   }) async {
     final response = await _dio.post(
-      ApiConstants.pagos,
+      ApiConstants.pagar,
       data: {
-        'catalogoProductoId': catalogoProductoId,
-        'numeroCuentaOrigen': numeroCuentaOrigen,
-        'referencia': referencia,
+        'numeroCuenta': numeroCuenta,
+        'idProducto': idProducto,
+        'idServicio': idServicio,
+        'telefonoOreferencia': telefonoOreferencia,
         'monto': monto,
-        'pin': pin,
-        'idDispositivo': idDispositivo ?? const Uuid().v4(),
+        'passwordOPin': passwordOPin,
+        'claveIdempotencia': claveIdempotencia ?? const Uuid().v4(),
       },
     );
-    return PagoResponseModel.fromJson(response.data);
+    return TransaccionResponseModel.fromJson(response.data);
   }
 
-  Future<List<MovimientoModel>> getMovimientos(String numeroCuenta) async {
-    final response = await _dio.get(ApiConstants.movimientos(numeroCuenta));
+  Future<List<TransaccionHistorialModel>> getHistorial({
+    int pagina = 0,
+    int tamano = 20,
+    String? numeroCuenta,
+  }) async {
+    if (numeroCuenta == null || numeroCuenta.isEmpty) {
+      final cuentas = await getMisCuentas();
+      if (cuentas.isNotEmpty) {
+        numeroCuenta = cuentas.first.numeroCuenta;
+      }
+    }
+    if (numeroCuenta == null || numeroCuenta.isEmpty) {
+      return [];
+    }
+    final response = await _dio.post(
+      ApiConstants.historial,
+      data: {
+        'numeroCuenta': numeroCuenta,
+        'limite': tamano,
+      },
+    );
     final dynamic data = response.data;
-    if (data is List) {
-      return data.map((item) => MovimientoModel.fromJson(item)).toList();
+    if (data is Map && data['data'] is List) {
+      return (data['data'] as List).map((item) => TransaccionHistorialModel.fromJson(item)).toList();
+    } else if (data is List) {
+      return data.map((item) => TransaccionHistorialModel.fromJson(item)).toList();
     }
     return [];
   }
 
-  Future<List<TicketModel>> getTickets(String numeroCuenta) async {
-    final response = await _dio.get(ApiConstants.tickets(numeroCuenta));
-    final dynamic data = response.data;
-    if (data is List) {
-      return data.map((item) => TicketModel.fromJson(item)).toList();
+  Future<TicketModel> getTicket(int folio) async {
+    final response = await _dio.get(ApiConstants.ticket(folio));
+    return TicketModel.fromJson(response.data);
+  }
+
+  Future<void> actualizarPin(String nuevoPin) async {
+    await _dio.post(
+      '/auth/pin',
+      data: {'pin': nuevoPin},
+    );
+  }
+
+  Future<Map<String, dynamic>> verificarSesion() async {
+    final response = await _dio.get('/auth/verificar-sesion');
+    if (response.data is Map<String, dynamic>) {
+      return response.data as Map<String, dynamic>;
     }
-    return [];
+    return {};
+  }
+
+  Future<void> cambiarEstatusCuenta(String numeroCuenta, String estatus) async {
+    await _dio.patch(
+      '/cuentas/mis-cuentas/estatus',
+      queryParameters: {
+        'numeroCuenta': numeroCuenta,
+        'estatus': estatus,
+      },
+    );
   }
 }
