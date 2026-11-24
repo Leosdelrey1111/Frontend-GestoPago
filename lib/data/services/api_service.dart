@@ -180,6 +180,33 @@ class ApiService {
     );
   }
 
+  Future<Map<String, dynamic>> solicitarOtpParaPin() async {
+    final response = await _dio.post('/auth/pin/solicitar-otp');
+    if (response.data is Map<String, dynamic>) {
+      return response.data as Map<String, dynamic>;
+    }
+    return {};
+  }
+
+  Future<Map<String, dynamic>> cambiarPinConSeguridad({
+    required String password,
+    required String otp,
+    required String nuevoPin,
+  }) async {
+    final response = await _dio.post(
+      '/auth/pin/cambiar-con-seguridad',
+      data: {
+        'password': password,
+        'otp': otp,
+        'nuevoPin': nuevoPin,
+      },
+    );
+    if (response.data is Map<String, dynamic>) {
+      return response.data as Map<String, dynamic>;
+    }
+    return {};
+  }
+
   Future<Map<String, dynamic>> verificarSesion() async {
     final response = await _dio.get('/auth/verificar-sesion');
     if (response.data is Map<String, dynamic>) {

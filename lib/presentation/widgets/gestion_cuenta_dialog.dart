@@ -4,6 +4,7 @@ import '../../core/theme/bank_theme.dart';
 import '../../core/widgets/bank_toast.dart';
 import '../../data/models/api_models.dart';
 import '../providers/pago_provider.dart';
+import 'cambiar_pin_dialog.dart';
 
 class GestionCuentaDialog extends StatefulWidget {
   final CuentaModel cuenta;
@@ -167,6 +168,22 @@ class _GestionCuentaDialogState extends State<GestionCuentaDialog> {
                                 esActiva ? 'BLOQUEADA' : 'ACTIVA',
                                 esActiva ? 'Tarjeta bloqueada temporalmente' : 'Tarjeta reactivada exitosamente',
                               ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Opción: Configurar / Cambiar NIP de Tarjeta (Con 2FA y Contraseña)
+                    _buildActionTile(
+                      icon: Icons.pin_rounded,
+                      titulo: 'Configurar / Cambiar NIP',
+                      subtitulo: 'Modifica tu NIP de 4 dígitos mediante validación 2FA por correo.',
+                      color: BankTheme.cyanAccent,
+                      onTap: () {
+                        Navigator.pop(context);
+                        showDialog(
+                          context: context,
+                          builder: (_) => const CambiarPinDialog(),
+                        );
+                      },
                     ),
                   ],
                 ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
 import '../../core/theme/bank_theme.dart';
+import '../../core/widgets/bank_select_field.dart';
 import '../../data/services/api_service.dart';
 
 class RegistroScreen extends StatefulWidget {
@@ -303,7 +304,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       const SizedBox(height: 6),
                       _buildRowResumen('Titular:', '${_nombreController.text.trim()} ${_apellidoPaternoController.text.trim()}'),
                       const SizedBox(height: 6),
-                      _buildRowResumen('Siguiente paso:', 'Crear PIN transaccional al iniciar sesión', valorColor: BankTheme.cyanAccent),
+                      _buildRowResumen('Tarjeta:', 'Débito Digital Activa', valorColor: BankTheme.emeraldSuccess),
                     ],
                   ),
                 ),
@@ -739,7 +740,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
             keyboardType: TextInputType.emailAddress,
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'El correo es requerido';
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v.trim())) {
+              if (!RegExp(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$').hasMatch(v.trim())) {
                 return 'Ingrese un correo electrónico válido';
               }
               return null;
@@ -840,32 +841,20 @@ class _RegistroScreenState extends State<RegistroScreen> {
               const SizedBox(width: 12),
               Expanded(
                 flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Estado *', style: TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      value: _estadoSeleccionado,
-                      dropdownColor: BankTheme.surfaceElevated,
-                      style: const TextStyle(color: BankTheme.textMain, fontSize: 13),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: BankTheme.background,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        prefixIcon: const Icon(Icons.map_outlined, color: BankTheme.primary, size: 19),
-                      ),
-                      items: _estadosMexico.map((e) {
-                        return DropdownMenuItem<String>(
-                          value: e['key'],
-                          child: Text(e['nombre']!, overflow: TextOverflow.ellipsis),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _estadoSeleccionado = val);
-                      },
-                    ),
-                  ],
+                child: BankSelectField<String>(
+                  label: 'Estado *',
+                  value: _estadoSeleccionado,
+                  prefixIcon: Icons.map_outlined,
+                  options: _estadosMexico.map((e) {
+                    return BankSelectOption<String>(
+                      value: e['key']!,
+                      label: e['nombre']!,
+                      icon: Icons.location_city_rounded,
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() => _estadoSeleccionado = val);
+                  },
                 ),
               ),
             ],
@@ -891,32 +880,22 @@ class _RegistroScreenState extends State<RegistroScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _coloniasSugeridas.isNotEmpty
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Colonia *', style: TextStyle(color: BankTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            value: _coloniasSugeridas.contains(_coloniaController.text) ? _coloniaController.text : _coloniasSugeridas.first,
-                            dropdownColor: BankTheme.surfaceElevated,
-                            style: const TextStyle(color: BankTheme.textMain, fontSize: 13),
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: BankTheme.background,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              prefixIcon: const Icon(Icons.location_on_outlined, color: BankTheme.primary, size: 19),
-                            ),
-                            items: _coloniasSugeridas.map((col) {
-                              return DropdownMenuItem<String>(
-                                value: col,
-                                child: Text(col, overflow: TextOverflow.ellipsis),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) setState(() => _coloniaController.text = val);
-                            },
-                          ),
-                        ],
+                    ? BankSelectField<String>(
+                        label: 'Colonia *',
+                        value: _coloniasSugeridas.contains(_coloniaController.text)
+                            ? _coloniaController.text
+                            : _coloniasSugeridas.first,
+                        prefixIcon: Icons.location_on_outlined,
+                        options: _coloniasSugeridas.map((col) {
+                          return BankSelectOption<String>(
+                            value: col,
+                            label: col,
+                            icon: Icons.home_rounded,
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() => _coloniaController.text = val);
+                        },
                       )
                     : _buildInput(
                         'Colonia *',

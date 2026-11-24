@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _irAlInicio(AuthProvider auth) {
     Navigator.pushReplacementNamed(
       context,
-      auth.tienePinConfigurado ? '/home' : '/configurar-pin',
+      '/home',
     );
   }
 
