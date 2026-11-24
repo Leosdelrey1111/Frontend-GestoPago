@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/bank_theme.dart';
+import '../../core/widgets/bank_toast.dart';
 import '../providers/auth_provider.dart';
 
 class ConfigurarPinScreen extends StatefulWidget {
@@ -43,11 +44,11 @@ class _ConfigurarPinScreenState extends State<ConfigurarPinScreen> {
     final exito = await auth.configurarPin(pin);
 
     if (exito && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('¡PIN de seguridad configurado con éxito!'),
-          backgroundColor: BankTheme.emeraldSuccess,
-        ),
+      BankToast.mostrar(
+        context,
+        titulo: 'Seguridad Configurada',
+        mensaje: '¡PIN transaccional configurado exitosamente!',
+        tipo: ToastTipo.exito,
       );
       Navigator.of(context).pushReplacementNamed('/home');
     }

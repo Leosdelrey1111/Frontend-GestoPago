@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/bank_theme.dart';
+import '../../core/widgets/bank_toast.dart';
 import '../../data/models/api_models.dart';
 import '../providers/pago_provider.dart';
 
@@ -25,13 +26,11 @@ class _GestionCuentaDialogState extends State<GestionCuentaDialog> {
       setState(() => _isLoading = false);
       if (exito) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(mensajeExito),
-            backgroundColor: nuevoEstatus == 'BLOQUEADA' || nuevoEstatus == 'CANCELADA'
-                ? BankTheme.danger
-                : BankTheme.emeraldSuccess,
-          ),
+        BankToast.mostrar(
+          context,
+          titulo: nuevoEstatus == 'BLOQUEADA' ? 'Tarjeta Bloqueada' : 'Tarjeta Activada',
+          mensaje: mensajeExito,
+          tipo: nuevoEstatus == 'BLOQUEADA' ? ToastTipo.advertencia : ToastTipo.exito,
         );
       }
     }
@@ -168,44 +167,6 @@ class _GestionCuentaDialogState extends State<GestionCuentaDialog> {
                                 esActiva ? 'BLOQUEADA' : 'ACTIVA',
                                 esActiva ? 'Tarjeta bloqueada temporalmente' : 'Tarjeta reactivada exitosamente',
                               ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Opción: Dar de Baja Definitiva (Cancelación)
-                    _buildActionTile(
-                      icon: Icons.cancel_outlined,
-                      titulo: 'Dar de Baja Cuenta / Cancelar',
-                      subtitulo: 'Inactiva permanentemente la cuenta debitando el servicio.',
-                      color: BankTheme.danger,
-                      onTap: _isLoading
-                          ? null
-                          : () {
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  backgroundColor: BankTheme.surface,
-                                  title: const Text('¿Confirmar Cancelación?', style: TextStyle(color: BankTheme.textMain, fontSize: 16)),
-                                  content: const Text(
-                                    'Esta acción dará de baja la cuenta bancaria. Para volver a operar deberás solicitar una nueva apertura.',
-                                    style: TextStyle(color: BankTheme.textMuted, fontSize: 13),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(ctx),
-                                      child: const Text('Regresar', style: TextStyle(color: BankTheme.textMuted)),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.pop(ctx);
-                                        _cambiarEstatus('CANCELADA', 'Cuenta dada de baja exitosamente');
-                                      },
-                                      style: ElevatedButton.styleFrom(backgroundColor: BankTheme.danger),
-                                      child: const Text('Sí, Cancelar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
                     ),
                   ],
                 ),

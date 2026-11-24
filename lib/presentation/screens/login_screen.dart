@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/bank_theme.dart';
+import '../../core/widgets/bank_toast.dart';
 import '../providers/auth_provider.dart';
 
 enum _MetodoVerificacion { app, correo }
@@ -133,13 +134,23 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _mostrarMensaje(String texto, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(texto),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
+    ToastTipo tipo = ToastTipo.info;
+    String titulo = 'Notificación';
+    if (color == BankTheme.danger) {
+      tipo = ToastTipo.error;
+      titulo = 'Error de Autenticación';
+    } else if (color == BankTheme.emeraldSuccess) {
+      tipo = ToastTipo.exito;
+      titulo = 'Operación Exitosa';
+    } else if (color == BankTheme.warning) {
+      tipo = ToastTipo.advertencia;
+      titulo = 'Atención';
+    }
+    BankToast.mostrar(
+      context,
+      titulo: titulo,
+      mensaje: texto,
+      tipo: tipo,
     );
   }
 

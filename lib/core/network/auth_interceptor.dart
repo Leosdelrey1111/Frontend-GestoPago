@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../storage/session_storage.dart';
+import '../widgets/bank_toast.dart';
 
 class SessionExpiredEvent {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -8,13 +9,11 @@ class SessionExpiredEvent {
   static void onSessionInvalidated(String message) {
     final context = navigatorKey.currentContext;
     if (context != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.redAccent,
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-        ),
+      BankToast.mostrar(
+        context,
+        titulo: 'Sesión Expirada',
+        mensaje: message,
+        tipo: ToastTipo.advertencia,
       );
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }

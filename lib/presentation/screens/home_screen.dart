@@ -303,39 +303,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ],
           ),
-          Row(
-            children: [
-              IconButton(
-                tooltip: 'Sincronizar saldo e historial',
-                icon: const Icon(Icons.sync_rounded, color: BankTheme.textMuted, size: 22),
-                onPressed: () {
-                  pago.cargarCuentas();
-                  pago.cargarCatalogo();
-                  pago.cargarHistorial();
-                },
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  await auth.cerrarSesion();
-                  if (context.mounted) {
-                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-                  }
-                },
-                icon: const Icon(Icons.logout_rounded, size: 16, color: BankTheme.danger),
-                label: isMobile
-                    ? const SizedBox.shrink()
-                    : const Text(
-                        'Cerrar Sesión',
-                        style: TextStyle(color: BankTheme.danger, fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: BankTheme.danger.withOpacity(0.35)),
-                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 16, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ],
+          OutlinedButton.icon(
+            onPressed: () async {
+              await auth.cerrarSesion();
+              if (context.mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+              }
+            },
+            icon: const Icon(Icons.logout_rounded, size: 16, color: BankTheme.danger),
+            label: isMobile
+                ? const SizedBox.shrink()
+                : const Text(
+                    'Cerrar Sesión',
+                    style: TextStyle(color: BankTheme.danger, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: BankTheme.danger.withOpacity(0.35)),
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 16, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
           ),
         ],
       ),
@@ -358,8 +344,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
                 const SizedBox(height: 18),
                 _buildKpiSummary(pago),
-                const SizedBox(height: 18),
-                _buildSecurityBadge(),
               ],
             ),
           ),
