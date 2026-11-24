@@ -116,72 +116,85 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final icono = esAdvertencia ? Icons.shield_outlined : Icons.error_outline_rounded;
 
     entry = OverlayEntry(
-      builder: (ctx) => Positioned(
-        top: 24,
-        right: 24,
-        left: ResponsiveLayout.isMobile(ctx) ? 24 : null,
-        child: Material(
-          color: Colors.transparent,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: BankTheme.surfaceElevated,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: color.withOpacity(0.65), width: 1.4),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.45),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
+      builder: (ctx) {
+        final topPadding = MediaQuery.of(ctx).padding.top;
+        return Positioned(
+          top: topPadding + 10,
+          right: ResponsiveLayout.isMobile(ctx) ? 16 : 24,
+          left: ResponsiveLayout.isMobile(ctx) ? 16 : null,
+          child: Material(
+            color: Colors.transparent,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: BankTheme.surfaceElevated,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: color.withOpacity(0.65), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
                     ),
-                    child: Icon(icono, color: color, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          titulo,
-                          style: const TextStyle(color: BankTheme.textMain, fontSize: 13.5, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          mensaje,
-                          style: const TextStyle(color: BankTheme.textMuted, fontSize: 12, height: 1.4),
-                        ),
-                      ],
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(icono, color: color, size: 20),
                     ),
-                  ),
-                  InkWell(
-                    onTap: () {
-                      if (entry.mounted) entry.remove();
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(Icons.close_rounded, color: BankTheme.textMuted, size: 18),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            titulo,
+                            style: const TextStyle(
+                              color: BankTheme.textMain,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            mensaje,
+                            style: const TextStyle(
+                              color: BankTheme.textMuted,
+                              fontSize: 11.5,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        if (entry.mounted) entry.remove();
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(Icons.close_rounded, color: BankTheme.textMuted, size: 16),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
 
     overlay.insert(entry);
