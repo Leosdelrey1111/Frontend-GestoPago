@@ -414,27 +414,46 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       height: 48,
       decoration: BoxDecoration(
         color: BankTheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: BankTheme.border),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: BankTheme.border.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(4),
       child: TabBar(
         controller: _tabController,
+        dividerColor: Colors.transparent,
+        indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
-          color: BankTheme.primary,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: BankTheme.glowShadow(BankTheme.primary),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0284C7).withValues(alpha: 0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         labelColor: Colors.white,
         unselectedLabelColor: BankTheme.textMuted,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 0.3),
         tabs: const [
           Tab(
             iconMargin: EdgeInsets.zero,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.grid_view_rounded, size: 18),
+                Icon(Icons.grid_view_rounded, size: 17),
                 SizedBox(width: 8),
                 Text('Catálogo de Pagos'),
               ],
@@ -445,7 +464,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.receipt_long_rounded, size: 18),
+                Icon(Icons.receipt_long_rounded, size: 17),
                 SizedBox(width: 8),
                 Text('Movimientos y Tickets'),
               ],
@@ -554,15 +573,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           decoration: BoxDecoration(
             color: BankTheme.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: BankTheme.border),
+            border: Border.all(color: BankTheme.border.withValues(alpha: 0.6)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: TextField(
             controller: _busquedaController,
-            style: const TextStyle(color: BankTheme.textMain, fontSize: 14),
+            style: const TextStyle(color: BankTheme.textMain, fontSize: 13.5),
             decoration: InputDecoration(
-              hintText: 'Buscar servicio o proveedor (CFE, Telcel, Dish, ABIB, Izzi...)',
+              hintText: 'Buscar por servicio, proveedor o producto...',
               hintStyle: const TextStyle(color: BankTheme.textHint, fontSize: 13),
-              prefixIcon: const Icon(Icons.search_rounded, color: BankTheme.primary, size: 20),
+              prefixIcon: const Icon(Icons.search_rounded, color: BankTheme.cyanAccent, size: 20),
               suffixIcon: _filtroTexto.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear_rounded, color: BankTheme.textMuted, size: 18),
@@ -703,61 +729,136 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (_, idx) {
           final tx = pago.historial[idx];
+          final esRechazada = tx.estado.toUpperCase().contains('RECHAZAD') || 
+                              tx.estado.toUpperCase().contains('FALLID');
+          final colorStatus = esRechazada ? BankTheme.danger : BankTheme.emeraldSuccess;
+          final iconoStatus = esRechazada ? Icons.cancel_outlined : Icons.check_circle_outline;
+
           return Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: BankTheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: BankTheme.border),
+              border: Border.all(
+                color: esRechazada 
+                    ? BankTheme.danger.withValues(alpha: 0.3) 
+                    : BankTheme.border.withValues(alpha: 0.6),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                    color: BankTheme.emeraldSuccess.withOpacity(0.15),
+                    color: colorStatus.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check_circle_outline, color: BankTheme.emeraldSuccess, size: 22),
+                  child: Icon(iconoStatus, color: colorStatus, size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        tx.producto,
-                        style: const TextStyle(color: BankTheme.textMain, fontSize: 13, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              tx.producto,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: BankTheme.textMain, 
+                                fontSize: 13.5, 
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: colorStatus.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              esRechazada ? 'RECHAZADA' : 'EXITOSA',
+                              style: TextStyle(
+                                color: colorStatus,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Folio: #${tx.folio} • Aut: ${tx.numAutorizacion ?? "AUT-SIMULADA"}',
-                        style: const TextStyle(color: BankTheme.textMuted, fontSize: 11),
+                        'Folio: #${tx.folio} • ${esRechazada ? "No se aplicó cargo" : "Aut: ${tx.numAutorizacion ?? "AUT-PROV"}"}',
+                        style: TextStyle(
+                          color: esRechazada ? BankTheme.textMuted : BankTheme.textMuted, 
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '-\$${tx.monto.toStringAsFixed(2)} MXN',
-                      style: const TextStyle(color: BankTheme.danger, fontSize: 14, fontWeight: FontWeight.bold),
+                      esRechazada ? '\$${tx.monto.toStringAsFixed(2)} MXN' : '-\$${tx.monto.toStringAsFixed(2)} MXN',
+                      style: TextStyle(
+                        color: esRechazada ? BankTheme.textMuted : BankTheme.danger, 
+                        fontSize: 13.5, 
+                        fontWeight: FontWeight.bold,
+                        decoration: esRechazada ? TextDecoration.lineThrough : null,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     InkWell(
+                      borderRadius: BorderRadius.circular(8),
                       onTap: () => _verTicket(tx.folio),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: BankTheme.primary.withOpacity(0.2),
+                          color: esRechazada 
+                              ? BankTheme.danger.withValues(alpha: 0.15) 
+                              : BankTheme.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: esRechazada 
+                                ? BankTheme.danger.withValues(alpha: 0.3) 
+                                : BankTheme.primary.withValues(alpha: 0.3),
+                          ),
                         ),
-                        child: const Row(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.receipt_rounded, color: BankTheme.cyanAccent, size: 14),
-                            SizedBox(width: 4),
-                            Text('Ticket', style: TextStyle(color: BankTheme.cyanAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                            Icon(
+                              Icons.receipt_rounded, 
+                              color: esRechazada ? BankTheme.danger : BankTheme.cyanAccent, 
+                              size: 13,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Ticket', 
+                              style: TextStyle(
+                                color: esRechazada ? BankTheme.danger : BankTheme.cyanAccent, 
+                                fontSize: 11, 
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ),
