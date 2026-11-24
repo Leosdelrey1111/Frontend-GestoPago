@@ -94,11 +94,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   provider.cargarHistorial();
                   provider.cargarCuentas();
                   final msg = provider.errorMessage ?? 'No fue posible completar el pago.';
-                  final esDuplicado = msg.toLowerCase().contains('igual') || msg.toLowerCase().contains('duplicad');
+                  final lower = msg.toLowerCase();
+                  
+                  String tituloToast = 'Operación no realizada';
+                  String mensajeToast = msg;
+                  bool esAdvertencia = false;
+
+                  if (lower.contains('saldo insuficiente')) {
+                    tituloToast = 'Saldo Insuficiente';
+                    mensajeToast = 'Tu cuenta no tiene fondos suficientes para cubrir este pago.';
+                    esAdvertencia = true;
+                  } else if (lower.contains('igual') || lower.contains('duplicad')) {
+                    tituloToast = 'Pago Duplicado Prevenido';
+                    mensajeToast = 'Ya se registró una transacción idéntica hace instantes.';
+                    esAdvertencia = true;
+                  } else if (lower.contains('proveedor') || lower.contains('gestopago') || lower.contains('55') || lower.contains('rechazo')) {
+                    tituloToast = 'Servicio Temporalmente No Disponible';
+                    mensajeToast = 'La red del proveedor (GestoPago) rechazó la operación. No se descontó ningún saldo de tu cuenta.';
+                    esAdvertencia = false;
+                  } else if (lower.contains('red') || lower.contains('conexion') || lower.contains('timeout')) {
+                    tituloToast = 'Error de Conexión Externa';
+                    mensajeToast = 'No hubo respuesta del proveedor. Por tu seguridad tu saldo permanece intacto.';
+                    esAdvertencia = true;
+                  }
+
                   _mostrarToast(
-                    esDuplicado ? 'Pago duplicado prevenido' : 'Pago rechazado por el proveedor',
-                    msg,
-                    esAdvertencia: esDuplicado,
+                    tituloToast,
+                    mensajeToast,
+                    esAdvertencia: esAdvertencia,
                   );
                 }
               },

@@ -202,58 +202,100 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildInput('Nombre(s)', _nombreController, Icons.person_outline, validator: (v) => v!.trim().isEmpty ? 'Requerido' : null),
+                        child: _buildInput(
+                          'Nombre(s) *',
+                          _nombreController,
+                          Icons.person_outline,
+                          maxLength: 40,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return 'El nombre es requerido';
+                            if (v.trim().length < 3) return 'Mínimo 3 caracteres requeridos';
+                            return null;
+                          },
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
-                        child: _buildInput('Apellido(s)', _apellidoController, Icons.badge_outlined, validator: (v) => v!.trim().isEmpty ? 'Requerido' : null),
+                        child: _buildInput(
+                          'Apellido(s) *',
+                          _apellidoController,
+                          Icons.badge_outlined,
+                          maxLength: 40,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return 'El apellido es requerido';
+                            if (v.trim().length < 3) return 'Mínimo 3 caracteres requeridos';
+                            return null;
+                          },
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 18),
 
                   _buildInput(
-                    'Correo Electrónico',
+                    'Correo Electrónico *',
                     _correoController,
                     Icons.email_outlined,
+                    maxLength: 60,
                     keyboardType: TextInputType.emailAddress,
-                    validator: (v) => (v == null || !v.contains('@')) ? 'Ingrese un correo válido' : null,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'El correo es requerido';
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v.trim())) {
+                        return 'Ingrese un correo electrónico válido';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 18),
 
                   _buildInput(
-                    'Teléfono Móvil (10 dígitos)',
+                    'Teléfono Móvil (10 dígitos) *',
                     _telefonoController,
                     Icons.phone_android_rounded,
+                    maxLength: 10,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
-                    validator: (v) => (v == null || v.trim().length != 10) ? 'Debe tener exactamente 10 dígitos' : null,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'El teléfono es requerido';
+                      if (v.trim().length != 10) return 'Debe tener exactamente 10 dígitos';
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 18),
 
                   _buildInput(
-                    'Contraseña de Acceso',
+                    'Contraseña de Acceso *',
                     _passwordController,
                     Icons.lock_outline_rounded,
+                    maxLength: 32,
                     obscureText: _obscurePass,
                     suffixIcon: IconButton(
                       icon: Icon(_obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: BankTheme.textHint, size: 20),
                       onPressed: () => setState(() => _obscurePass = !_obscurePass),
                     ),
-                    validator: (v) => (v == null || v.length < 6) ? 'Mínimo 6 caracteres' : null,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'La contraseña es requerida';
+                      if (v.length < 6) return 'Mínimo 6 caracteres requeridos';
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 18),
 
                   _buildInput(
-                    'Confirmar Contraseña',
+                    'Confirmar Contraseña *',
                     _confirmPasswordController,
                     Icons.lock_reset_rounded,
+                    maxLength: 32,
                     obscureText: _obscureConfirmPass,
                     suffixIcon: IconButton(
                       icon: Icon(_obscureConfirmPass ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: BankTheme.textHint, size: 20),
                       onPressed: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
                     ),
-                    validator: (v) => (v != _passwordController.text) ? 'Las contraseñas no coinciden' : null,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Confirme su contraseña';
+                      if (v != _passwordController.text) return 'Las contraseñas no coinciden';
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 32),
 
@@ -288,6 +330,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     bool obscureText = false,
     Widget? suffixIcon,
     TextInputType? keyboardType,
+    int? maxLength,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
@@ -300,9 +343,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
           controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
+          maxLength: maxLength,
           inputFormatters: inputFormatters,
           style: const TextStyle(color: BankTheme.textMain, fontSize: 14),
           decoration: InputDecoration(
+            counterText: '',
             prefixIcon: Icon(icon, color: BankTheme.primary, size: 19),
             suffixIcon: suffixIcon,
             filled: true,
