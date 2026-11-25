@@ -189,39 +189,97 @@ class TransaccionHistorialModel {
 
 class TicketModel {
   final String folio;
+  final String upc;
+  final String autorizacionProveedor;
+  final String idTransaccionProveedor;
+  final String dateSendTx;
   final String fechaHora;
   final String nombreServicio;
+  final String producto;
+  final String tipoProducto;
   final String referencia;
   final double monto;
   final double comision;
-  final String autorizacionProveedor;
   final String estatus;
   final String leyendaFiscal;
+  final String? urlLogo;
 
   TicketModel({
     required this.folio,
+    this.upc = '',
+    required this.autorizacionProveedor,
+    this.idTransaccionProveedor = '',
+    this.dateSendTx = '',
     required this.fechaHora,
     required this.nombreServicio,
+    this.producto = '',
+    this.tipoProducto = '',
     required this.referencia,
     required this.monto,
     this.comision = 0.0,
-    required this.autorizacionProveedor,
     required this.estatus,
     this.leyendaFiscal = '',
+    this.urlLogo,
   });
+
+  TicketModel copyWith({
+    String? folio,
+    String? upc,
+    String? autorizacionProveedor,
+    String? idTransaccionProveedor,
+    String? dateSendTx,
+    String? fechaHora,
+    String? nombreServicio,
+    String? producto,
+    String? tipoProducto,
+    String? referencia,
+    double? monto,
+    double? comision,
+    String? estatus,
+    String? leyendaFiscal,
+    String? urlLogo,
+  }) {
+    return TicketModel(
+      folio: folio ?? this.folio,
+      upc: upc ?? this.upc,
+      autorizacionProveedor: autorizacionProveedor ?? this.autorizacionProveedor,
+      idTransaccionProveedor: idTransaccionProveedor ?? this.idTransaccionProveedor,
+      dateSendTx: dateSendTx ?? this.dateSendTx,
+      fechaHora: fechaHora ?? this.fechaHora,
+      nombreServicio: nombreServicio ?? this.nombreServicio,
+      producto: producto ?? this.producto,
+      tipoProducto: tipoProducto ?? this.tipoProducto,
+      referencia: referencia ?? this.referencia,
+      monto: monto ?? this.monto,
+      comision: comision ?? this.comision,
+      estatus: estatus ?? this.estatus,
+      leyendaFiscal: leyendaFiscal ?? this.leyendaFiscal,
+      urlLogo: urlLogo ?? this.urlLogo,
+    );
+  }
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
     final data = json['data'] is Map<String, dynamic> ? json['data'] as Map<String, dynamic> : json;
+    final fechaRaw = (data['fechaOperacion'] ?? data['dateSendTx'] ?? data['fecha'] ?? '').toString();
+    final serv = (data['servicio'] ?? '').toString();
+    final prod = (data['producto'] ?? data['nombreProducto'] ?? serv).toString();
+
     return TicketModel(
       folio: (data['folio'] ?? data['id'] ?? '').toString(),
-      fechaHora: (data['fechaOperacion'] ?? data['fecha'] ?? '').toString(),
-      nombreServicio: (data['servicio'] ?? data['producto'] ?? 'Servicio de Pago').toString(),
-      referencia: (data['referenciaOTelefono'] ?? data['referencia'] ?? '').toString(),
+      upc: (data['upc'] ?? data['claveIdempotencia'] ?? '').toString(),
+      autorizacionProveedor: (data['numeroAutorizacion'] ?? data['numAutorizacion'] ?? data['autorizacion'] ?? 'N/A').toString(),
+      idTransaccionProveedor: (data['idTransaccionProveedor'] ?? data['idTxGestoPago'] ?? data['idTx'] ?? 'N/A').toString(),
+      dateSendTx: fechaRaw,
+      fechaHora: fechaRaw,
+      nombreServicio: serv.isNotEmpty ? serv : 'Servicio GestoPago',
+      producto: prod,
+      tipoProducto: (data['tipoProducto'] ?? data['categoria'] ?? serv).toString(),
+      referencia: (data['referenciaOTelefono'] ?? data['referencia'] ?? data['telefono'] ?? '').toString(),
       monto: (data['monto'] as num?)?.toDouble() ?? double.tryParse('${data['monto']}') ?? 0.0,
       comision: (data['comision'] as num?)?.toDouble() ?? 0.0,
-      autorizacionProveedor: (data['numeroAutorizacion'] ?? data['idTransaccionProveedor'] ?? 'AUT-APROBADA').toString(),
-      estatus: (data['estatus'] ?? 'EXITOSO').toString(),
-      leyendaFiscal: (data['leyenda'] ?? 'Transacción bancaria procesada en tiempo real mediante cifrado bancario seguro.').toString(),
+      estatus: (data['estatus'] ?? data['estado'] ?? 'EXITOSO').toString(),
+      leyendaFiscal: (data['leyenda'] ?? data['leyendaFiscal'] ?? '').toString(),
+      urlLogo: CatalogoProductoModel._resolverUrlLogo(data['urlLogo']),
     );
   }
 }

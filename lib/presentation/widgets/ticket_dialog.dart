@@ -24,8 +24,27 @@ class TicketDialog extends StatelessWidget {
         ? Icons.cancel_outlined 
         : esPendiente ? Icons.hourglass_empty_rounded : Icons.check_circle_outline_rounded;
     final tituloCabecera = esRechazada 
-        ? 'PAGO RECHAZADO' 
-        : esPendiente ? 'PAGO EN PROCESO' : 'PAGO COMPLETADO';
+        ? 'COMPROBANTE: SERVICIO RECHAZADO' 
+        : esPendiente ? 'PAGO EN PROCESO DE VALIDACIÓN' : 'COMPROBANTE OFICIAL DE PAGO';
+
+    // Leyenda de respuesta de GestoPago
+    String leyendaGestoPago = ticket.leyendaFiscal.trim();
+    if (leyendaGestoPago.isEmpty) {
+      if (esRechazada) {
+        leyendaGestoPago = 'Servicio no disponible o rechazado por la red de GestoPago. No se aplicó ningún cargo a su cuenta.';
+      } else if (esPendiente) {
+        leyendaGestoPago = 'Transacción en validación con el proveedor. Su saldo permanece retenido hasta conciliación.';
+      } else {
+        leyendaGestoPago = 'Transacción autorizada y liquidada exitosamente a través de la pasarela GestoPago. Conserve este comprobante.';
+      }
+    }
+
+    final nombreProd = ticket.producto.isNotEmpty 
+        ? ticket.producto 
+        : (ticket.nombreServicio.isNotEmpty ? ticket.nombreServicio : 'Servicio Digital');
+    final categoriaProd = ticket.tipoProducto.isNotEmpty 
+        ? ticket.tipoProducto 
+        : (ticket.nombreServicio.isNotEmpty ? ticket.nombreServicio : 'Telecomunicaciones / Servicios');
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -33,7 +52,7 @@ class TicketDialog extends StatelessWidget {
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
+          constraints: const BoxConstraints(maxWidth: 440),
           child: Container(
             decoration: BoxDecoration(
               color: BankTheme.surface,
@@ -41,7 +60,7 @@ class TicketDialog extends StatelessWidget {
               border: Border.all(color: BankTheme.border, width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.6),
+                  color: Colors.black.withOpacity(0.65),
                   blurRadius: 40,
                   offset: const Offset(0, 16),
                 ),
@@ -49,127 +68,243 @@ class TicketDialog extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Cabecera Dinámica (Verde para éxito, Roja para rechazado)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [colorGradiente1, colorGradiente2],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Cabecera Dinámica con Gradiente y Logo
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [colorGradiente1, colorGradiente2],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(iconoCabecera, color: Colors.white, size: 40),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          tituloCabecera,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          ticket.nombreServicio.isNotEmpty ? ticket.nombreServicio : 'Comprobante Digital GestoPago',
-                          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11.5),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Cuerpo del Ticket
-                  Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Center(
-                          child: Column(
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                '\$${ticket.monto.toStringAsFixed(2)} MXN',
-                                style: const TextStyle(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w900,
-                                  color: BankTheme.textMain,
-                                  letterSpacing: -0.5,
+                              // Imagen / Logo del Producto si existe
+                              if (ticket.urlLogo != null && ticket.urlLogo!.isNotEmpty) ...[
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.25),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Image.network(
+                                    ticket.urlLogo!,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        Icon(iconoCabecera, color: colorGradiente1, size: 28),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                ticket.nombreServicio,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: BankTheme.cyanAccent,
+                                const SizedBox(width: 14),
+                              ] else ...[
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(iconoCabecera, color: Colors.white, size: 32),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      tituloCabecera,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.1,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'GestoPago Gateway 2.0',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.85),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        Divider(height: 1, color: BankTheme.border),
-                        const SizedBox(height: 16),
-
-                        // Desglose del Recibo
-                        _buildRow('Folio Operación', '#${ticket.folio}'),
-                        _buildRow('Número Autorización', ticket.autorizacionProveedor),
-                        _buildRow('Referencia / Teléfono', ticket.referencia),
-                        _buildRow('Comisión Proveedor', '\$${ticket.comision.toStringAsFixed(2)} MXN'),
-                        _buildRow('Fecha y Hora', ticket.fechaHora),
-                        _buildRow('Estatus', ticket.estatus, 
-                            valorColor: esRechazada ? BankTheme.danger : (esPendiente ? BankTheme.warning : BankTheme.emeraldSuccess)),
-
-                        const SizedBox(height: 16),
-                        Divider(height: 1, color: BankTheme.border),
-                        const SizedBox(height: 14),
-
-                        // Leyenda de Idempotencia y Cifrado
-                        Text(
-                          ticket.leyendaFiscal.isNotEmpty
-                              ? ticket.leyendaFiscal
-                              : 'Transacción procesada y validada en tiempo real mediante cifrado AES-256 e idempotencia contable.',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 10.5, color: BankTheme.textHint, height: 1.4),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Botón de Cierre
-                        SizedBox(
-                          height: 44,
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: BankTheme.surfaceElevated,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(color: BankTheme.border),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: const Text('Cerrar Comprobante', style: TextStyle(color: BankTheme.textMain, fontWeight: FontWeight.bold, fontSize: 13)),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+
+                    // Cuerpo del Ticket
+                    Padding(
+                      padding: const EdgeInsets.all(22.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Monto y Nombre del Producto
+                          Center(
+                            child: Column(
+                              children: [
+                                Text(
+                                  '\$${ticket.monto.toStringAsFixed(2)} MXN',
+                                  style: TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w900,
+                                    color: esRechazada ? BankTheme.danger : BankTheme.textMain,
+                                    letterSpacing: -0.5,
+                                    decoration: esRechazada ? TextDecoration.lineThrough : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  nombreProd,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: BankTheme.cyanAccent,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                // Badge de Tipo de Producto
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: BankTheme.surfaceElevated,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: BankTheme.borderSubtle),
+                                  ),
+                                  child: Text(
+                                    'Tipo: $categoriaProd',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: BankTheme.textMuted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Divider(height: 1, color: BankTheme.border),
+                          const SizedBox(height: 14),
+
+                          // Desglose de Datos de Transacción
+                          _buildRow('Folio Operación', '#${ticket.folio}'),
+                          _buildRow('UPC (Código Único)', ticket.upc.isNotEmpty ? ticket.upc : 'N/A'),
+                          _buildRow(
+                            'No. Autorización GestoPago', 
+                            ticket.autorizacionProveedor.isNotEmpty ? ticket.autorizacionProveedor : 'N/A',
+                            valorColor: esRechazada ? BankTheme.danger : BankTheme.emeraldSuccess,
+                          ),
+                          if (ticket.idTransaccionProveedor.isNotEmpty && ticket.idTransaccionProveedor != 'N/A')
+                            _buildRow('ID Tx Proveedor', ticket.idTransaccionProveedor),
+                          _buildRow('Referencia / Teléfono', ticket.referencia),
+                          _buildRow('Comisión Proveedor', '\$${ticket.comision.toStringAsFixed(2)} MXN'),
+                          _buildRow(
+                            'Fecha Envío Tx (dateSendTx)', 
+                            ticket.dateSendTx.isNotEmpty ? ticket.dateSendTx : ticket.fechaHora,
+                          ),
+                          _buildRow(
+                            'Estatus', 
+                            ticket.estatus,
+                            valorColor: esRechazada 
+                                ? BankTheme.danger 
+                                : (esPendiente ? BankTheme.warning : BankTheme.emeraldSuccess),
+                          ),
+
+                          const SizedBox(height: 14),
+                          Divider(height: 1, color: BankTheme.border),
+                          const SizedBox(height: 12),
+
+                          // Leyenda de GestoPago (Respuesta oficial / Servicio no disponible)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: esRechazada 
+                                  ? BankTheme.danger.withOpacity(0.08)
+                                  : BankTheme.surfaceElevated,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: esRechazada 
+                                    ? BankTheme.danger.withOpacity(0.3)
+                                    : BankTheme.borderSubtle,
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  esRechazada ? Icons.info_outline_rounded : Icons.verified_user_outlined,
+                                  color: esRechazada ? BankTheme.danger : BankTheme.cyanAccent,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    leyendaGestoPago,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: esRechazada ? BankTheme.danger : BankTheme.textHint,
+                                      height: 1.35,
+                                      fontWeight: esRechazada ? FontWeight.w600 : FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+
+                          // Botón de Cierre
+                          SizedBox(
+                            height: 44,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: BankTheme.surfaceElevated,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(color: BankTheme.border),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                'Cerrar Comprobante', 
+                                style: TextStyle(
+                                  color: BankTheme.textMain, 
+                                  fontWeight: FontWeight.bold, 
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -185,6 +320,7 @@ class TicketDialog extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(fontSize: 12, color: BankTheme.textMuted)),
+          const SizedBox(width: 8),
           Flexible(
             child: Text(
               value,

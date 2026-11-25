@@ -85,9 +85,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   provider.cargarHistorial();
                   final ticket = await provider.obtenerTicket(resultado.folioTransaccion!);
                   if (ticket != null && mounted) {
+                    final ticketEnriquecido = ticket.copyWith(
+                      producto: producto.nombreProducto,
+                      tipoProducto: producto.servicio,
+                      urlLogo: producto.urlLogo,
+                    );
                     showDialog(
                       context: context,
-                      builder: (_) => TicketDialog(ticket: ticket),
+                      builder: (_) => TicketDialog(ticket: ticketEnriquecido),
                     );
                   }
                 } else if (mounted) {
@@ -230,9 +235,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final provider = Provider.of<PagoProvider>(context, listen: false);
     final ticket = await provider.obtenerTicket(folio);
     if (ticket != null && mounted) {
+      // Buscar en catálogo para enriquecer imagen y tipo si coinciden
+      String? logoUrl = ticket.urlLogo;
+      String tipoProd = ticket.tipoProducto;
+      String nombreProd = ticket.producto;
+
+      final match = provider.catalogo.where(
+        (p) => p.nombreProducto.toLowerCase() == ticket.producto.toLowerCase() ||
+               p.servicio.toLowerCase() == ticket.nombreServicio.toLowerCase() ||
+               p.idServicio == ticket.nombreServicio,
+      ).firstOrNull;
+
+      if (match != null) {
+        logoUrl ??= match.urlLogo;
+        if (tipoProd.isEmpty || tipoProd == 'Servicio GestoPago') {
+          tipoProd = match.servicio;
+        }
+        if (nombreProd.isEmpty || nombreProd == ticket.nombreServicio) {
+          nombreProd = match.nombreProducto;
+        }
+      }
+
+      final ticketEnriquecido = ticket.copyWith(
+        urlLogo: logoUrl,
+        tipoProducto: tipoProd,
+        producto: nombreProd,
+      );
+
       showDialog(
         context: context,
-        builder: (_) => TicketDialog(ticket: ticket),
+        builder: (_) => TicketDialog(ticket: ticketEnriquecido),
       );
     }
   }
