@@ -317,22 +317,30 @@ class _PagoModalState extends State<PagoModal> {
             const SizedBox(height: 16),
           ],
 
-          // Referencia / Teléfono
-          const Text(
-            'Número de Teléfono (10 dígitos) o Referencia',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: BankTheme.textMuted),
+          // Referencia / Teléfono dinámico según producto
+          Text(
+            widget.producto.esServicioReferencia
+                ? 'Número de Referencia del Recibo / Servicio (10 a 30 dígitos)'
+                : 'Número Celular / Teléfono (10 dígitos)',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: BankTheme.textMuted),
           ),
           const SizedBox(height: 8),
           TextFormField(
             controller: _refController,
             keyboardType: TextInputType.number,
-            maxLength: 10,
+            maxLength: widget.producto.esServicioReferencia ? 30 : 10,
             style: const TextStyle(color: BankTheme.textMain, fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'Ej. 5512345678 (10 dígitos)',
+              hintText: widget.producto.esServicioReferencia
+                  ? 'Ej. 012345678901234 (10 a 30 dígitos del recibo)'
+                  : 'Ej. 5512345678 (10 dígitos)',
               hintStyle: const TextStyle(color: BankTheme.textHint, fontSize: 13),
               counterText: '',
-              prefixIcon: const Icon(Icons.phone_android_rounded, size: 20, color: BankTheme.primary),
+              prefixIcon: Icon(
+                widget.producto.esServicioReferencia ? Icons.receipt_long_rounded : Icons.phone_android_rounded,
+                size: 20,
+                color: BankTheme.primary,
+              ),
               filled: true,
               fillColor: BankTheme.background,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: BankTheme.border)),
@@ -341,8 +349,15 @@ class _PagoModalState extends State<PagoModal> {
             ),
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'La referencia o teléfono es obligatoria';
-              if (v.trim().length != 10 || !RegExp(r'^\d{10}$').hasMatch(v.trim())) {
-                return 'Debe ingresar exactamente 10 dígitos numéricos';
+              final val = v.trim();
+              if (widget.producto.esServicioReferencia) {
+                if (val.length < 5 || val.length > 30) {
+                  return 'La referencia debe contener entre 5 y 30 dígitos';
+                }
+              } else {
+                if (val.length != 10 || !RegExp(r'^\d{10}$').hasMatch(val)) {
+                  return 'Debe ingresar exactamente 10 dígitos numéricos';
+                }
               }
               return null;
             },

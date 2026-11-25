@@ -73,6 +73,8 @@ class CatalogoProductoModel {
   final String idProducto;
   final double? precio;
   final String? tipoReferencia;
+  final String? idCatTipoServicio;
+  final String? tipoFront;
   final String? urlLogo;
 
   CatalogoProductoModel({
@@ -83,8 +85,30 @@ class CatalogoProductoModel {
     required this.idProducto,
     this.precio,
     this.tipoReferencia,
+    this.idCatTipoServicio,
+    this.tipoFront,
     this.urlLogo,
   });
+
+  /// Determina si es pago de servicios (CFE, Telmex, etc.) o recarga telefónica móvil
+  bool get esServicioReferencia {
+    final cat = (idCatTipoServicio ?? '').trim();
+    if (cat == '10' || cat == '11') return true;
+    final serv = servicio.toUpperCase();
+    if (serv.contains('CFE') ||
+        serv.contains('TELMEX') ||
+        serv.contains('TOTALPLAY') ||
+        serv.contains('IZZI') ||
+        serv.contains('AGUA') ||
+        serv.contains('GAS') ||
+        serv.contains('SKY') ||
+        serv.contains('VEOLIA') ||
+        serv.contains('NATURGY') ||
+        serv.contains('SACMEX')) {
+      return true;
+    }
+    return false;
+  }
 
   factory CatalogoProductoModel.fromJson(Map<String, dynamic> json) {
     return CatalogoProductoModel(
@@ -95,6 +119,8 @@ class CatalogoProductoModel {
       idProducto: (json['idProducto'] ?? '').toString(),
       precio: _parseDouble(json['precio']),
       tipoReferencia: json['tipoReferencia']?.toString(),
+      idCatTipoServicio: json['idCatTipoServicio']?.toString(),
+      tipoFront: json['tipoFront']?.toString(),
       urlLogo: _resolverUrlLogo(json['urlLogo']),
     );
   }

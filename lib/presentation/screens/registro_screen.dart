@@ -102,6 +102,17 @@ class _RegistroScreenState extends State<RegistroScreen> {
     'Hogar',
   ];
 
+  // Tabulador de Rangos de Ingreso Mensual (Selector Oficial)
+  final List<BankSelectOption<double>> _opcionesRangosIngreso = const [
+    BankSelectOption(value: 5000.0, label: '\$0 - \$7,500 MXN', icon: Icons.attach_money_rounded),
+    BankSelectOption(value: 11000.0, label: '\$7,501 - \$15,000 MXN', icon: Icons.attach_money_rounded),
+    BankSelectOption(value: 22500.0, label: '\$15,001 - \$30,000 MXN', icon: Icons.payments_rounded),
+    BankSelectOption(value: 40000.0, label: '\$30,001 - \$50,000 MXN', icon: Icons.account_balance_wallet_rounded),
+    BankSelectOption(value: 75000.0, label: '\$50,001 - \$100,000 MXN', icon: Icons.savings_rounded),
+    BankSelectOption(value: 150000.0, label: 'Más de \$100,000 MXN', icon: Icons.diamond_outlined),
+  ];
+  double? _rangoIngresoSeleccionado;
+
   // Colonias sugeridas del C.P.
   List<String> _coloniasSugeridas = [];
   bool _buscandoCp = false;
@@ -415,6 +426,14 @@ class _RegistroScreenState extends State<RegistroScreen> {
       }
 
       if (_errorCorreoEnTiempoReal != null) return;
+      if (_ocupacionController.text.trim().isEmpty) {
+        setState(() => _errorMessage = 'Por favor selecciona tu ocupación');
+        return;
+      }
+      if (_rangoIngresoSeleccionado == null && _ingresoMensualController.text.trim().isEmpty) {
+        setState(() => _errorMessage = 'Por favor selecciona tu rango de ingreso mensual');
+        return;
+      }
       setState(() => _currentStep = 2);
     }
   }
@@ -1085,7 +1104,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
           ),
           const SizedBox(height: 14),
 
-          // Ocupación e Ingreso Mensual
+          // Ocupación e Ingreso Mensual mediante Selectores
           Row(
             children: [
               Expanded(
@@ -1110,22 +1129,17 @@ class _RegistroScreenState extends State<RegistroScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                flex: 2,
-                child: _buildInput(
-                  'Ingreso (\$ MXN) *',
-                  _ingresoMensualController,
-                  Icons.attach_money_rounded,
-                  focusNode: _focusIngreso,
-                  textInputAction: TextInputAction.done,
-                  maxLength: 9,
-                  hintText: '15000',
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Requerido';
-                    final num = double.tryParse(v.trim());
-                    if (num == null || num <= 0) return '> \$0';
-                    return null;
+                flex: 3,
+                child: BankSelectField<double>(
+                  label: 'Rango de Ingreso *',
+                  value: _rangoIngresoSeleccionado,
+                  prefixIcon: Icons.attach_money_rounded,
+                  options: _opcionesRangosIngreso,
+                  onChanged: (val) {
+                    setState(() {
+                      _rangoIngresoSeleccionado = val;
+                      _ingresoMensualController.text = val.toStringAsFixed(0);
+                    });
                   },
                 ),
               ),
@@ -1359,9 +1373,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusNumInt),
                   maxLength: 10,
-                  hintText: '123',
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  hintText: '123 o 12-A',
+                  textCapitalization: TextCapitalization.characters,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9\-\s/#]')),
+                  ],
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Requerido';
                     return null;

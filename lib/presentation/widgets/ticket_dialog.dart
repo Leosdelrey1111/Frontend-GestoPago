@@ -212,7 +212,11 @@ class TicketDialog extends StatelessWidget {
 
                           // Desglose de Datos de Transacción
                           _buildRow('Folio Operación', '#${ticket.folio}'),
-                          _buildRow('UPC (Código Único)', ticket.upc.isNotEmpty ? ticket.upc : 'N/A'),
+                          _buildRow(
+                            'UPC (Llave de Transacción)', 
+                            ticket.upc.isNotEmpty ? ticket.upc : 'N/A',
+                            valorColor: BankTheme.cyanAccent,
+                          ),
                           _buildRow(
                             'No. Autorización GestoPago', 
                             ticket.autorizacionProveedor.isNotEmpty ? ticket.autorizacionProveedor : 'N/A',
@@ -220,7 +224,11 @@ class TicketDialog extends StatelessWidget {
                           ),
                           if (ticket.idTransaccionProveedor.isNotEmpty && ticket.idTransaccionProveedor != 'N/A')
                             _buildRow('ID Tx Proveedor', ticket.idTransaccionProveedor),
-                          _buildRow('Referencia / Teléfono', ticket.referencia),
+                          _buildRow(
+                            ticket.referencia.length > 10 ? 'No. Referencia Servicio' : 'Teléfono / Referencia',
+                            ticket.referencia,
+                            valorColor: BankTheme.textMain,
+                          ),
                           _buildRow('Comisión Proveedor', '\$${ticket.comision.toStringAsFixed(2)} MXN'),
                           _buildRow(
                             'Fecha Envío Tx (dateSendTx)', 
