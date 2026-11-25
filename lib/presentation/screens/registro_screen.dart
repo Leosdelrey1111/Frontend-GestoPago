@@ -326,7 +326,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
   Future<void> _verificarCorreoEnBackend(String correo) async {
     final emailNorm = correo.trim().toLowerCase();
-    if (emailNorm.isEmpty || !RegExp(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$').hasMatch(emailNorm)) {
+    final emailRegex = RegExp(r'^[a-zA-Z0-9_.+-]+@([a-zA-Z0-9-]+\.)+([a-zA-Z]{2,6})$');
+    if (emailNorm.isEmpty || !emailRegex.hasMatch(emailNorm)) {
       return;
     }
     if (_ultimoCorreoVerificado == emailNorm) return;
@@ -1035,8 +1036,18 @@ class _RegistroScreenState extends State<RegistroScreen> {
                 : null,
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'El correo es requerido';
-              if (!RegExp(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$').hasMatch(v.trim())) {
-                return 'Ingrese un correo electrónico válido';
+              final clean = v.trim().toLowerCase();
+              final emailRegex = RegExp(r'^[a-zA-Z0-9_.+-]+@([a-zA-Z0-9-]+\.)+([a-zA-Z]{2,6})$');
+              if (!emailRegex.hasMatch(clean)) {
+                return 'Formato inválido (ej. usuario@gmail.com)';
+              }
+              final parts = clean.split('@');
+              if (parts.length == 2) {
+                final domainParts = parts[1].split('.');
+                final tld = domainParts.last;
+                if (tld.length < 2 || tld.length > 6) {
+                  return 'Extensión de dominio inválida (.com, .mx, etc.)';
+                }
               }
               if (_errorCorreoEnTiempoReal != null) {
                 return _errorCorreoEnTiempoReal;
