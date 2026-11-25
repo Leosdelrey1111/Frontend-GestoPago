@@ -29,11 +29,24 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _fechaNacimientoController = TextEditingController();
   DateTime? _fechaNacimientoSeleccionada;
 
+  final _focusNombre = FocusNode();
+  final _focusSegundoNombre = FocusNode();
+  final _focusApellidoPaterno = FocusNode();
+  final _focusApellidoMaterno = FocusNode();
+
   // Paso 1: Fiscal & Contacto
   final _curpController = TextEditingController();
   final _rfcController = TextEditingController();
   final _correoController = TextEditingController();
   final _telefonoController = TextEditingController();
+
+  final _focusCurp = FocusNode();
+  final _focusRfc = FocusNode();
+  final _focusTelefono = FocusNode();
+  final _focusCorreo = FocusNode();
+
+  bool _verificandoCorreo = false;
+  String? _errorCorreoEnTiempoReal;
 
   // Paso 2: Domicilio y Claves
   final _codigoPostalController = TextEditingController();
@@ -43,6 +56,15 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _coloniaController = TextEditingController();
   final _municipioController = TextEditingController();
   String _estadoSeleccionado = 'CIUDAD_DE_MEXICO';
+
+  final _focusCp = FocusNode();
+  final _focusMunicipio = FocusNode();
+  final _focusColonia = FocusNode();
+  final _focusCalle = FocusNode();
+  final _focusNumExt = FocusNode();
+  final _focusNumInt = FocusNode();
+  final _focusPass = FocusNode();
+  final _focusConfirmPass = FocusNode();
 
   // Colonias sugeridas del C.P.
   List<String> _coloniasSugeridas = [];
@@ -111,6 +133,23 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _codigoPostalController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+
+    _focusNombre.dispose();
+    _focusSegundoNombre.dispose();
+    _focusApellidoPaterno.dispose();
+    _focusApellidoMaterno.dispose();
+    _focusCurp.dispose();
+    _focusRfc.dispose();
+    _focusTelefono.dispose();
+    _focusCorreo.dispose();
+    _focusCp.dispose();
+    _focusMunicipio.dispose();
+    _focusColonia.dispose();
+    _focusCalle.dispose();
+    _focusNumExt.dispose();
+    _focusNumInt.dispose();
+    _focusPass.dispose();
+    _focusConfirmPass.dispose();
     super.dispose();
   }
 
@@ -134,6 +173,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
           List<String> colonias = [];
           for (var p in places) {
             String colName = (p['place name'] ?? '').toString();
+            // Si viene una entrada tipo "Ciudad Dolores Hidalgo", es el municipio
+            if (colName.toLowerCase().startsWith('ciudad ') && _municipioController.text.trim().isEmpty) {
+              _municipioController.text = colName.substring(7).trim();
+            }
             if (colName.isNotEmpty && !colonias.contains(colName)) {
               colonias.add(colName);
             }
@@ -145,9 +188,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
             if (colonias.isNotEmpty) {
               _coloniaController.text = colonias.first;
             }
-            if (_municipioController.text.isEmpty && colonias.isNotEmpty) {
-              _municipioController.text = colonias.first.split(' ').first;
-            }
+            // Si el municipio sigue vacío, no inventamos con la colonia, lo dejamos al usuario para llenarlo limpiamente
           });
         }
       }
@@ -195,16 +236,56 @@ class _RegistroScreenState extends State<RegistroScreen> {
     }
   }
 
-  void _avanzarPaso() {
+  Future<void> _verificarCorreoEnBackend(String correo) async {
+    if (correo.isEmpty || !RegExp(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$').hasMatch(correo)) {
+      return;
+    }
+    setState(() => _verificandoCorreo = true);
+    try {
+      final disponible = await _apiService.verificarCorreoDisponible(correo);
+      if (!disponible && mounted) {
+        setState(() {
+          _errorCorreoEnTiempoReal = 'Este correo electrónico ya se encuentra registrado';
+        });
+      } else if (mounted) {
+        setState(() {
+          _errorCorreoEnTiempoReal = null;
+        });
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _verificandoCorreo = false);
+    }
+  }
+
+  void _avanzarPaso() async {
     setState(() => _errorMessage = null);
     if (_currentStep == 0) {
       final formValid = _formKeyStep0.currentState!.validate();
       if (!formValid) return;
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
-      if (_formKeyStep1.currentState!.validate()) {
-        setState(() => _currentStep = 2);
+      final formValid = _formKeyStep1.currentState!.validate();
+      if (!formValid) return;
+
+      final correo = _correoController.text.trim();
+      setState(() => _verificandoCorreo = true);
+      try {
+        final disponible = await _apiService.verificarCorreoDisponible(correo);
+        if (!disponible) {
+          setState(() {
+            _errorCorreoEnTiempoReal = 'El correo electrónico ya se encuentra registrado';
+            _verificandoCorreo = false;
+          });
+          return;
+        }
+      } catch (_) {
+      } finally {
+        if (mounted) setState(() => _verificandoCorreo = false);
       }
+
+      if (_errorCorreoEnTiempoReal != null) return;
+      setState(() => _currentStep = 2);
     }
   }
 
@@ -538,6 +619,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   'Primer Nombre *',
                   _nombreController,
                   Icons.badge_outlined,
+                  focusNode: _focusNombre,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusSegundoNombre),
                   maxLength: 40,
                   hintText: 'Ej. Juan',
                   validator: (v) {
@@ -553,6 +637,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   'Segundo Nombre',
                   _segundoNombreController,
                   Icons.badge_outlined,
+                  focusNode: _focusSegundoNombre,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusApellidoPaterno),
                   maxLength: 40,
                   hintText: 'Ej. Carlos (Opc.)',
                 ),
@@ -567,6 +654,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   'Apellido Paterno *',
                   _apellidoPaternoController,
                   Icons.person_outline,
+                  focusNode: _focusApellidoPaterno,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusApellidoMaterno),
                   maxLength: 40,
                   hintText: 'Ej. Pérez',
                   validator: (v) {
@@ -582,6 +672,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   'Apellido Materno *',
                   _apellidoMaternoController,
                   Icons.person_outline,
+                  focusNode: _focusApellidoMaterno,
+                  textInputAction: TextInputAction.done,
                   maxLength: 40,
                   hintText: 'Ej. López',
                   validator: (v) {
@@ -706,6 +798,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   'CURP (18 caracteres) *',
                   _curpController,
                   Icons.fingerprint_rounded,
+                  focusNode: _focusCurp,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusRfc),
                   maxLength: 18,
                   hintText: 'Ej. HEDB000514HGT...',
                   textCapitalization: TextCapitalization.characters,
@@ -729,6 +824,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   'RFC (12-13 car.) *',
                   _rfcController,
                   Icons.assignment_ind_outlined,
+                  focusNode: _focusRfc,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusTelefono),
                   maxLength: 13,
                   hintText: 'Ej. HEDB0005141A0',
                   textCapitalization: TextCapitalization.characters,
@@ -754,6 +852,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
             'Teléfono Móvil (10 dígitos) *',
             _telefonoController,
             Icons.phone_android_rounded,
+            focusNode: _focusTelefono,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusCorreo),
             maxLength: 10,
             hintText: 'Ej. 5512345678',
             keyboardType: TextInputType.number,
@@ -770,13 +871,36 @@ class _RegistroScreenState extends State<RegistroScreen> {
             'Correo Electrónico *',
             _correoController,
             Icons.email_outlined,
+            focusNode: _focusCorreo,
+            textInputAction: TextInputAction.done,
             maxLength: 60,
             hintText: 'Ej. usuario@dominio.com',
             keyboardType: TextInputType.emailAddress,
+            onChanged: (val) {
+              if (_errorCorreoEnTiempoReal != null) {
+                setState(() => _errorCorreoEnTiempoReal = null);
+              }
+              if (val.contains('@') && val.contains('.')) {
+                _verificarCorreoEnBackend(val.trim());
+              }
+            },
+            suffixIcon: _verificandoCorreo
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: BankTheme.cyanAccent),
+                    ),
+                  )
+                : null,
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'El correo es requerido';
               if (!RegExp(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$').hasMatch(v.trim())) {
                 return 'Ingrese un correo electrónico válido';
+              }
+              if (_errorCorreoEnTiempoReal != null) {
+                return _errorCorreoEnTiempoReal;
               }
               return null;
             },
@@ -843,6 +967,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _codigoPostalController,
+                      focusNode: _focusCp,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_focusMunicipio),
                       maxLength: 5,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(5)],
@@ -904,6 +1031,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   'Alcaldía / Municipio *',
                   _municipioController,
                   Icons.location_city_rounded,
+                  focusNode: _focusMunicipio,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusCalle),
                   maxLength: 50,
                   hintText: 'Ej. Benito Juárez',
                   validator: (v) {
@@ -936,6 +1066,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                         'Colonia *',
                         _coloniaController,
                         Icons.location_on_outlined,
+                        focusNode: _focusColonia,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusCalle),
                         maxLength: 50,
                         hintText: 'Ej. Del Valle',
                         validator: (v) {
@@ -957,6 +1090,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   'Calle *',
                   _calleController,
                   Icons.signpost_outlined,
+                  focusNode: _focusCalle,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusNumExt),
                   maxLength: 80,
                   hintText: 'Ej. Av. Insurgentes Sur',
                   validator: (v) {
@@ -972,6 +1108,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   'Num. Ext. *',
                   _numeroExteriorController,
                   null, // Sin icono interior para dar 100% de espacio al número
+                  focusNode: _focusNumExt,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusNumInt),
                   maxLength: 10,
                   hintText: '123',
                   validator: (v) {
@@ -987,6 +1126,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   'Num. Int.',
                   _numeroInteriorController,
                   null, // Sin icono interior para dar 100% de espacio al número
+                  focusNode: _focusNumInt,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusPass),
                   maxLength: 10,
                   hintText: '4B (Opc.)',
                 ),
@@ -1000,6 +1142,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
             'Contraseña de Acceso (8-12 car.) *',
             _passwordController,
             Icons.lock_outline_rounded,
+            focusNode: _focusPass,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusConfirmPass),
             maxLength: 12,
             hintText: 'Ej. Pass#2026',
             obscureText: _obscurePass,
@@ -1027,6 +1172,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
             'Confirmar Contraseña *',
             _confirmPasswordController,
             Icons.lock_reset_rounded,
+            focusNode: _focusConfirmPass,
+            textInputAction: TextInputAction.done,
             maxLength: 12,
             hintText: 'Repite tu contraseña',
             obscureText: _obscureConfirmPass,
@@ -1174,7 +1321,18 @@ class _RegistroScreenState extends State<RegistroScreen> {
     List<TextInputFormatter>? inputFormatters,
     ValueChanged<String>? onChanged,
     String? Function(String?)? validator,
+    FocusNode? focusNode,
+    TextInputAction? textInputAction,
+    VoidCallback? onFieldSubmitted,
   }) {
+    List<TextInputFormatter> formatters = [];
+    if (maxLength != null) {
+      formatters.add(LengthLimitingTextInputFormatter(maxLength));
+    }
+    if (inputFormatters != null) {
+      formatters.addAll(inputFormatters);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1185,11 +1343,14 @@ class _RegistroScreenState extends State<RegistroScreen> {
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
+          focusNode: focusNode,
+          textInputAction: textInputAction ?? TextInputAction.next,
+          onFieldSubmitted: onFieldSubmitted != null ? (_) => onFieldSubmitted() : null,
           obscureText: obscureText,
           keyboardType: keyboardType,
           maxLength: maxLength,
           textCapitalization: textCapitalization,
-          inputFormatters: inputFormatters,
+          inputFormatters: formatters,
           onChanged: onChanged,
           style: const TextStyle(color: BankTheme.textMain, fontSize: 14),
           decoration: InputDecoration(

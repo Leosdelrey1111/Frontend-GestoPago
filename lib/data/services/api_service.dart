@@ -31,6 +31,21 @@ class ApiService {
     return {};
   }
 
+  Future<bool> verificarCorreoDisponible(String correo) async {
+    try {
+      final response = await _dio.get(
+        '/auth/verificar-correo',
+        queryParameters: {'correo': correo.trim().toLowerCase()},
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data['disponible'] == true;
+      }
+      return true;
+    } catch (_) {
+      return true;
+    }
+  }
+
   Future<Map<String, dynamic>> registrarUsuario({
     required String nombre,
     String? segundoNombre,
