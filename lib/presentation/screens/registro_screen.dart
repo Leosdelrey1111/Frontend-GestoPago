@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -70,6 +71,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
   List<String> _coloniasSugeridas = [];
   bool _buscandoCp = false;
 
+  // Catálogo oficial de municipios por Estado
+  Map<String, List<String>> _catalogoMunicipios = {};
+  List<String> _municipiosDisponibles = [];
+
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -113,6 +118,43 @@ class _RegistroScreenState extends State<RegistroScreen> {
     {'key': 'YUCATAN', 'nombre': 'Yucatán'},
     {'key': 'ZACATECAS', 'nombre': 'Zacatecas'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarCatalogoMunicipios();
+  }
+
+  Future<void> _cargarCatalogoMunicipios() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/data/estados_municipios.json');
+      final Map<String, dynamic> rawMap = json.decode(jsonString);
+      Map<String, List<String>> normalizado = {};
+
+      rawMap.forEach((estadoNom, munList) {
+        String key = _mapearEstado(estadoNom);
+        List<String> list = (munList as List).map((m) => m.toString()).toList();
+        normalizado[key] = list;
+      });
+
+      if (mounted) {
+        setState(() {
+          _catalogoMunicipios = normalizado;
+          _actualizarMunicipiosDeEstado(_estadoSeleccionado);
+        });
+      }
+    } catch (_) {}
+  }
+
+  void _actualizarMunicipiosDeEstado(String estadoKey) {
+    final list = _catalogoMunicipios[estadoKey] ?? [];
+    setState(() {
+      _municipiosDisponibles = list;
+      if (list.isNotEmpty && !list.contains(_municipioController.text)) {
+        _municipioController.text = list.first;
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -184,11 +226,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
           setState(() {
             _estadoSeleccionado = estadoKey;
+            _actualizarMunicipiosDeEstado(estadoKey);
             _coloniasSugeridas = colonias;
             if (colonias.isNotEmpty) {
               _coloniaController.text = colonias.first;
             }
-            // Si el municipio sigue vacío, no inventamos con la colonia, lo dejamos al usuario para llenarlo limpiamente
           });
         }
       }
@@ -587,14 +629,17 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     ),
                   ),
 
-                // Contenido del paso actual
-                IndexedStack(
-                  index: _currentStep,
-                  children: [
-                    _buildStep0Personal(),
-                    _buildStep1FiscalYContacto(),
-                    _buildStep2DomicilioYSeguridad(),
-                  ],
+                // Contenido del paso actual ajustado exactamente a la altura de su contenido
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: KeyedSubtree(
+                    key: ValueKey<int>(_currentStep),
+                    child: _currentStep == 0
+                        ? _buildStep0Personal()
+                        : _currentStep == 1
+                            ? _buildStep1FiscalYContacto()
+                            : _buildStep2DomicilioYSeguridad(),
+                  ),
                 ),
               ],
             ),
@@ -1015,7 +1060,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     );
                   }).toList(),
                   onChanged: (val) {
-                    setState(() => _estadoSeleccionado = val);
+                    setState(() {
+                      _estadoSeleccionado = val;
+                      _actualizarMunicipiosDeEstado(val);
+                    });
                   },
                 ),
               ),
@@ -1027,20 +1075,38 @@ class _RegistroScreenState extends State<RegistroScreen> {
           Row(
             children: [
               Expanded(
-                child: _buildInput(
-                  'Alcaldía / Municipio *',
-                  _municipioController,
-                  Icons.location_city_rounded,
-                  focusNode: _focusMunicipio,
-                  textInputAction: TextInputAction.next,
-                  onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusCalle),
-                  maxLength: 50,
-                  hintText: 'Ej. Benito Juárez',
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Requerido';
-                    return null;
-                  },
-                ),
+                child: _municipiosDisponibles.isNotEmpty
+                    ? BankSelectField<String>(
+                        label: 'Alcaldía / Municipio *',
+                        value: _municipiosDisponibles.contains(_municipioController.text)
+                            ? _municipioController.text
+                            : _municipiosDisponibles.first,
+                        prefixIcon: Icons.location_city_rounded,
+                        options: _municipiosDisponibles.map((m) {
+                          return BankSelectOption<String>(
+                            value: m,
+                            label: m,
+                            icon: Icons.apartment_rounded,
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() => _municipioController.text = val);
+                        },
+                      )
+                    : _buildInput(
+                        'Alcaldía / Municipio *',
+                        _municipioController,
+                        Icons.location_city_rounded,
+                        focusNode: _focusMunicipio,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusCalle),
+                        maxLength: 50,
+                        hintText: 'Ej. Benito Juárez',
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Requerido';
+                          return null;
+                        },
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(
