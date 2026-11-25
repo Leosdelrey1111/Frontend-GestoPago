@@ -29,6 +29,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _apellidoMaternoController = TextEditingController();
   final _fechaNacimientoController = TextEditingController();
   DateTime? _fechaNacimientoSeleccionada;
+  String? _sexoSeleccionado;
+  String? _estadoCivilSeleccionado;
 
   final _focusNombre = FocusNode();
   final _focusSegundoNombre = FocusNode();
@@ -40,14 +42,19 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _rfcController = TextEditingController();
   final _correoController = TextEditingController();
   final _telefonoController = TextEditingController();
+  final _ocupacionController = TextEditingController();
+  final _ingresoMensualController = TextEditingController();
 
   final _focusCurp = FocusNode();
   final _focusRfc = FocusNode();
   final _focusTelefono = FocusNode();
   final _focusCorreo = FocusNode();
+  final _focusOcupacion = FocusNode();
+  final _focusIngreso = FocusNode();
 
   bool _verificandoCorreo = false;
   String? _errorCorreoEnTiempoReal;
+  String? _ultimoCorreoVerificado;
 
   // Paso 2: Domicilio y Claves
   final _codigoPostalController = TextEditingController();
@@ -56,7 +63,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _numeroInteriorController = TextEditingController();
   final _coloniaController = TextEditingController();
   final _municipioController = TextEditingController();
-  String _estadoSeleccionado = 'CIUDAD_DE_MEXICO';
+  String? _estadoSeleccionado; // Sin valor por defecto
 
   final _focusCp = FocusNode();
   final _focusMunicipio = FocusNode();
@@ -66,6 +73,34 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _focusNumInt = FocusNode();
   final _focusPass = FocusNode();
   final _focusConfirmPass = FocusNode();
+
+  // Opciones de Sexo Oficial
+  final List<BankSelectOption<String>> _opcionesSexo = const [
+    BankSelectOption(value: 'MASCULINO', label: 'Masculino', icon: Icons.male_rounded),
+    BankSelectOption(value: 'FEMENINO', label: 'Femenino', icon: Icons.female_rounded),
+    BankSelectOption(value: 'PREFIERO_NO_DECIR', label: 'Prefiero no especificar', icon: Icons.transgender_rounded),
+  ];
+
+  // Opciones de Estado Civil
+  final List<BankSelectOption<String>> _opcionesEstadoCivil = const [
+    BankSelectOption(value: 'SOLTERO', label: 'Soltero(a)', icon: Icons.person_rounded),
+    BankSelectOption(value: 'CASADO', label: 'Casado(a)', icon: Icons.favorite_rounded),
+    BankSelectOption(value: 'UNION_LIBRE', label: 'Unión Libre', icon: Icons.group_rounded),
+    BankSelectOption(value: 'DIVORCIADO', label: 'Divorciado(a)', icon: Icons.heart_broken_rounded),
+    BankSelectOption(value: 'VIUDO', label: 'Viudo(a)', icon: Icons.shield_outlined),
+  ];
+
+  // Opciones de Ocupación Oficial
+  final List<String> _catalogoOcupaciones = const [
+    'Empleado Sector Privado',
+    'Empleado Sector Público',
+    'Profesionista Independiente',
+    'Empresario / Negocio Propio',
+    'Comerciante',
+    'Estudiante',
+    'Jubilado / Pensionado',
+    'Hogar',
+  ];
 
   // Colonias sugeridas del C.P.
   List<String> _coloniasSugeridas = [];
@@ -146,7 +181,14 @@ class _RegistroScreenState extends State<RegistroScreen> {
     } catch (_) {}
   }
 
-  void _actualizarMunicipiosDeEstado(String estadoKey) {
+  void _actualizarMunicipiosDeEstado(String? estadoKey) {
+    if (estadoKey == null) {
+      setState(() {
+        _municipiosDisponibles = [];
+        _municipioController.clear();
+      });
+      return;
+    }
     final list = _catalogoMunicipios[estadoKey] ?? [];
     setState(() {
       _municipiosDisponibles = list;
@@ -167,6 +209,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _rfcController.dispose();
     _correoController.dispose();
     _telefonoController.dispose();
+    _ocupacionController.dispose();
+    _ingresoMensualController.dispose();
     _calleController.dispose();
     _numeroExteriorController.dispose();
     _numeroInteriorController.dispose();
@@ -184,6 +228,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _focusRfc.dispose();
     _focusTelefono.dispose();
     _focusCorreo.dispose();
+    _focusOcupacion.dispose();
+    _focusIngreso.dispose();
     _focusCp.dispose();
     _focusMunicipio.dispose();
     _focusColonia.dispose();
@@ -279,12 +325,16 @@ class _RegistroScreenState extends State<RegistroScreen> {
   }
 
   Future<void> _verificarCorreoEnBackend(String correo) async {
-    if (correo.isEmpty || !RegExp(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$').hasMatch(correo)) {
+    final emailNorm = correo.trim().toLowerCase();
+    if (emailNorm.isEmpty || !RegExp(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$').hasMatch(emailNorm)) {
       return;
     }
+    if (_ultimoCorreoVerificado == emailNorm) return;
+
     setState(() => _verificandoCorreo = true);
     try {
-      final disponible = await _apiService.verificarCorreoDisponible(correo);
+      final disponible = await _apiService.verificarCorreoDisponible(emailNorm);
+      _ultimoCorreoVerificado = emailNorm;
       if (!disponible && mounted) {
         setState(() {
           _errorCorreoEnTiempoReal = 'Este correo electrónico ya se encuentra registrado';
@@ -305,15 +355,24 @@ class _RegistroScreenState extends State<RegistroScreen> {
     if (_currentStep == 0) {
       final formValid = _formKeyStep0.currentState!.validate();
       if (!formValid) return;
+      if (_sexoSeleccionado == null) {
+        setState(() => _errorMessage = 'Por favor selecciona tu sexo');
+        return;
+      }
+      if (_estadoCivilSeleccionado == null) {
+        setState(() => _errorMessage = 'Por favor selecciona tu estado civil');
+        return;
+      }
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
       final formValid = _formKeyStep1.currentState!.validate();
       if (!formValid) return;
 
-      final correo = _correoController.text.trim();
+      final correo = _correoController.text.trim().toLowerCase();
       setState(() => _verificandoCorreo = true);
       try {
         final disponible = await _apiService.verificarCorreoDisponible(correo);
+        _ultimoCorreoVerificado = correo;
         if (!disponible) {
           setState(() {
             _errorCorreoEnTiempoReal = 'El correo electrónico ya se encuentra registrado';
@@ -361,6 +420,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
         rfc: _rfcController.text.trim().toUpperCase(),
         correo: _correoController.text.trim().toLowerCase(),
         telefono: _telefonoController.text.trim(),
+        sexo: _sexoSeleccionado,
+        estadoCivil: _estadoCivilSeleccionado,
+        ocupacion: _ocupacionController.text.trim().isNotEmpty ? _ocupacionController.text.trim() : null,
+        ingresoMensual: double.tryParse(_ingresoMensualController.text.trim()),
         calle: _calleController.text.trim(),
         numeroExterior: _numeroExteriorController.text.trim(),
         numeroInterior: _numeroInteriorController.text.trim().isNotEmpty
@@ -368,7 +431,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
             : null,
         colonia: _coloniaController.text.trim(),
         municipio: _municipioController.text.trim(),
-        estado: _estadoSeleccionado,
+        estado: _estadoSeleccionado ?? 'CIUDAD_DE_MEXICO',
         codigoPostal: int.parse(_codigoPostalController.text.trim()),
         password: _passwordController.text.trim(),
       );
@@ -802,6 +865,36 @@ class _RegistroScreenState extends State<RegistroScreen> {
               );
             },
           ),
+          const SizedBox(height: 14),
+
+          // Sexo y Estado Civil mediante catálogos oficiales
+          Row(
+            children: [
+              Expanded(
+                child: BankSelectField<String>(
+                  label: 'Sexo *',
+                  value: _sexoSeleccionado,
+                  prefixIcon: Icons.wc_rounded,
+                  options: _opcionesSexo,
+                  onChanged: (val) {
+                    setState(() => _sexoSeleccionado = val);
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: BankSelectField<String>(
+                  label: 'Estado Civil *',
+                  value: _estadoCivilSeleccionado,
+                  prefixIcon: Icons.favorite_border_rounded,
+                  options: _opcionesEstadoCivil,
+                  onChanged: (val) {
+                    setState(() => _estadoCivilSeleccionado = val);
+                  },
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 28),
 
           SizedBox(
@@ -917,7 +1010,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
             _correoController,
             Icons.email_outlined,
             focusNode: _focusCorreo,
-            textInputAction: TextInputAction.done,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusOcupacion),
             maxLength: 60,
             hintText: 'Ej. usuario@dominio.com',
             keyboardType: TextInputType.emailAddress,
@@ -949,6 +1043,54 @@ class _RegistroScreenState extends State<RegistroScreen> {
               }
               return null;
             },
+          ),
+          const SizedBox(height: 14),
+
+          // Ocupación e Ingreso Mensual
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: BankSelectField<String>(
+                  label: 'Ocupación *',
+                  value: _catalogoOcupaciones.contains(_ocupacionController.text)
+                      ? _ocupacionController.text
+                      : null,
+                  prefixIcon: Icons.work_outline_rounded,
+                  options: _catalogoOcupaciones.map((o) {
+                    return BankSelectOption<String>(
+                      value: o,
+                      label: o,
+                      icon: Icons.business_center_rounded,
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() => _ocupacionController.text = val);
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: _buildInput(
+                  'Ingreso (\$ MXN) *',
+                  _ingresoMensualController,
+                  Icons.attach_money_rounded,
+                  focusNode: _focusIngreso,
+                  textInputAction: TextInputAction.done,
+                  maxLength: 9,
+                  hintText: '15000',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Requerido';
+                    final num = double.tryParse(v.trim());
+                    if (num == null || num <= 0) return '> \$0';
+                    return null;
+                  },
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 28),
 
@@ -1179,6 +1321,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   onFieldSubmitted: () => FocusScope.of(context).requestFocus(_focusNumInt),
                   maxLength: 10,
                   hintText: '123',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Requerido';
                     return null;
