@@ -181,7 +181,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     } catch (_) {}
   }
 
-  void _actualizarMunicipiosDeEstado(String? estadoKey) {
+  void _actualizarMunicipiosDeEstado(String? estadoKey, {String? municipioSugerido}) {
     if (estadoKey == null) {
       setState(() {
         _municipiosDisponibles = [];
@@ -190,12 +190,39 @@ class _RegistroScreenState extends State<RegistroScreen> {
       return;
     }
     final list = _catalogoMunicipios[estadoKey] ?? [];
+    String? munEncontrado;
+
+    if (municipioSugerido != null && municipioSugerido.isNotEmpty) {
+      final sugClean = _limpiarTextoParaComparar(municipioSugerido);
+      for (final m in list) {
+        final mClean = _limpiarTextoParaComparar(m);
+        if (mClean.contains(sugClean) || sugClean.contains(mClean)) {
+          munEncontrado = m;
+          break;
+        }
+      }
+    }
+
     setState(() {
       _municipiosDisponibles = list;
-      if (list.isNotEmpty && !list.contains(_municipioController.text)) {
-        _municipioController.text = list.first;
+      if (munEncontrado != null) {
+        _municipioController.text = munEncontrado;
+      } else if (_municipioController.text.isNotEmpty && list.contains(_municipioController.text)) {
+        // Mantener el que ya tenía si sigue perteneciendo al estado
+      } else {
+        _municipioController.clear(); // No forzar el primer municipio alfabético
       }
     });
+  }
+
+  String _limpiarTextoParaComparar(String s) {
+    return s.toUpperCase()
+        .replaceAll('Á', 'A').replaceAll('É', 'E').replaceAll('Í', 'I').replaceAll('Ó', 'O').replaceAll('Ú', 'U')
+        .replaceAll('CIUDAD ', '')
+        .replaceAll('CUNA DE LA INDEPENDENCIA NACIONAL', '')
+        .replaceAll(' DE ', ' ')
+        .replaceAll(RegExp(r'[^A-Z0-9 ]'), '')
+        .trim();
   }
 
   @override
@@ -259,11 +286,12 @@ class _RegistroScreenState extends State<RegistroScreen> {
           // Mapear estado
           String estadoKey = _mapearEstado(stateRaw);
           List<String> colonias = [];
+          String? municipioDetectado;
+
           for (var p in places) {
             String colName = (p['place name'] ?? '').toString();
-            // Si viene una entrada tipo "Ciudad Dolores Hidalgo", es el municipio
-            if (colName.toLowerCase().startsWith('ciudad ') && _municipioController.text.trim().isEmpty) {
-              _municipioController.text = colName.substring(7).trim();
+            if (colName.toLowerCase().startsWith('ciudad ')) {
+              municipioDetectado = colName.substring(7).trim();
             }
             if (colName.isNotEmpty && !colonias.contains(colName)) {
               colonias.add(colName);
@@ -272,7 +300,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
           setState(() {
             _estadoSeleccionado = estadoKey;
-            _actualizarMunicipiosDeEstado(estadoKey);
+            _actualizarMunicipiosDeEstado(estadoKey, municipioSugerido: municipioDetectado);
             _coloniasSugeridas = colonias;
             if (colonias.isNotEmpty) {
               _coloniaController.text = colonias.first;
@@ -1233,7 +1261,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                         label: 'Alcaldía / Municipio *',
                         value: _municipiosDisponibles.contains(_municipioController.text)
                             ? _municipioController.text
-                            : _municipiosDisponibles.first,
+                            : null,
                         prefixIcon: Icons.location_city_rounded,
                         options: _municipiosDisponibles.map((m) {
                           return BankSelectOption<String>(
