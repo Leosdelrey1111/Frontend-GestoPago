@@ -10,6 +10,7 @@ import '../widgets/credit_card_widget.dart';
 import '../widgets/pago_modal.dart';
 import '../widgets/service_card_widget.dart';
 import '../widgets/ticket_dialog.dart';
+import '../widgets/cambiar_pin_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -56,6 +57,68 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   void _abrirModalPago(CatalogoProductoModel producto) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    // Validación preventiva: Si el usuario aún no tiene NIP configurado, se solicita primero
+    if (!auth.tienePinConfigurado) {
+      _mostrarAlertaConfigurarPin(producto);
+      return;
+    }
+
+    _ejecutarAperturaModalPago(producto);
+  }
+
+  void _mostrarAlertaConfigurarPin(CatalogoProductoModel producto) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: BankTheme.surfaceElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: BankTheme.border),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.shield_outlined, color: BankTheme.warning, size: 26),
+            SizedBox(width: 10),
+            Text('NIP Requerido', style: TextStyle(color: BankTheme.textMain, fontSize: 17, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Para realizar pagos y compras de servicios primero debes configurar tu NIP de seguridad de 4 dígitos.',
+          style: TextStyle(color: BankTheme.textMuted, fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar', style: TextStyle(color: BankTheme.textHint)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              showDialog(
+                context: context,
+                builder: (_) => CambiarPinDialog(
+                  onPinConfigurado: () {
+                    // Una vez configurado, abrimos de inmediato el modal de pago
+                    _ejecutarAperturaModalPago(producto);
+                  },
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: BankTheme.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Configurar NIP', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _ejecutarAperturaModalPago(CatalogoProductoModel producto) {
     showDialog(
       context: context,
       barrierDismissible: false,

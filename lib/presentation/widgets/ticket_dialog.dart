@@ -31,12 +31,14 @@ class TicketDialog extends StatelessWidget {
     String leyendaGestoPago = ticket.leyendaFiscal.trim();
     if (leyendaGestoPago.isEmpty) {
       if (esRechazada) {
-        leyendaGestoPago = 'Servicio no disponible o rechazado por la red de GestoPago. No se aplicó ningún cargo a su cuenta.';
+        leyendaGestoPago = 'Servicio no disponible o rechazado por la red de GestoPago. No se aplicó ningún cargo a su cuenta. Para cualquier duda o aclaración al 800-437-8672 (GESTOPAGO).';
       } else if (esPendiente) {
-        leyendaGestoPago = 'Transacción en validación con el proveedor. Su saldo permanece retenido hasta conciliación.';
+        leyendaGestoPago = 'Transacción en validación con el proveedor. Su saldo permanece retenido hasta conciliación. Para cualquier duda o aclaración al 800-437-8672.';
       } else {
-        leyendaGestoPago = 'Transacción autorizada y liquidada exitosamente a través de la pasarela GestoPago. Conserve este comprobante.';
+        leyendaGestoPago = 'Transacción autorizada y liquidada exitosamente a través de la pasarela GestoPago. Para cualquier duda o aclaración al 800-437-8672.';
       }
+    } else if (!leyendaGestoPago.contains('aclaración') && !leyendaGestoPago.contains('aclaracion')) {
+      leyendaGestoPago = '$leyendaGestoPago Para cualquier duda o aclaración al 800-437-8672.';
     }
 
     final nombreProd = ticket.producto.isNotEmpty 
@@ -214,7 +216,7 @@ class TicketDialog extends StatelessWidget {
                           _buildRow('Folio Operación', '#${ticket.folio}'),
                           _buildRow(
                             'UPC (Llave de Transacción)', 
-                            ticket.upc.isNotEmpty ? ticket.upc : 'N/A',
+                            _formatearUpc(ticket.upc),
                             valorColor: BankTheme.cyanAccent,
                           ),
                           _buildRow(
@@ -229,7 +231,11 @@ class TicketDialog extends StatelessWidget {
                             ticket.referencia,
                             valorColor: BankTheme.textMain,
                           ),
-                          _buildRow('Comisión Proveedor', '\$${ticket.comision.toStringAsFixed(2)} MXN'),
+                          _buildRow(
+                            'Atención a Clientes',
+                            'Dudas/Aclaraciones: 800-437-8672',
+                            valorColor: BankTheme.cyanAccent,
+                          ),
                           _buildRow(
                             'Fecha Envío Tx (dateSendTx)', 
                             ticket.dateSendTx.isNotEmpty ? ticket.dateSendTx : ticket.fechaHora,
@@ -319,6 +325,15 @@ class TicketDialog extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Normaliza el UPC a un identificador numérico/alfanumérico estándar de 10 a 15 dígitos según GestoPago
+  String _formatearUpc(String upc) {
+    if (upc.isEmpty || upc == 'N/A') return 'N/A';
+    final limpio = upc.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+    if (limpio.length <= 15) return limpio;
+    // Si viene en formato largo con UUID o prefijo UPC_83_..., extraemos los 12-15 caracteres significativos
+    return limpio.substring(limpio.length - 12);
   }
 
   Widget _buildRow(String label, String value, {Color? valorColor}) {
