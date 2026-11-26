@@ -145,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
                 if (resultado != null && resultado.folioTransaccion != null) {
                   provider.cargarCuentas();
-                  provider.cargarHistorial();
+                  await provider.cargarHistorial();
                   final ticket = await provider.obtenerTicket(resultado.folioTransaccion!);
                   if (ticket != null && mounted) {
                     final ticketEnriquecido = ticket.copyWith(
@@ -159,8 +159,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     );
                   }
                 } else if (mounted) {
-                  provider.cargarHistorial();
                   provider.cargarCuentas();
+                  await provider.cargarHistorial();
+
+                  // Si la transacción fue rechazada o fallida pero se registró en el historial,
+                  // recuperamos el ticket del último movimiento para mostrar el comprobante de rechazo.
+                  final ultimoMov = provider.historial.isNotEmpty ? provider.historial.first : null;
+                  final esTransaccionRegistrada = ultimoMov != null &&
+                      (ultimoMov.producto.toLowerCase() == producto.nombreProducto.toLowerCase() ||
+                       ultimoMov.servicio.toLowerCase() == producto.servicio.toLowerCase() ||
+                       (ultimoMov.monto - monto).abs() < 0.01);
+
+                  if (esTransaccionRegistrada) {
+                    final ticketRechazo = await provider.obtenerTicket(ultimoMov.folio);
+                    if (ticketRechazo != null && mounted) {
+                      final ticketEnriquecido = ticketRechazo.copyWith(
+                        producto: producto.nombreProducto,
+                        tipoProducto: producto.servicio,
+                        urlLogo: producto.urlLogo,
+                      );
+                      showDialog(
+                        context: context,
+                        builder: (_) => TicketDialog(ticket: ticketEnriquecido),
+                      );
+                      return;
+                    }
+                  }
+
+                  // Si fue un rechazo previo al registro en el proveedor (ej. saldo insuficiente o PIN incorrecto),
+                  // mostramos el toast descriptivo correspondiente.
                   final msg = provider.errorMessage ?? 'No fue posible completar el pago.';
                   final lower = msg.toLowerCase();
                   

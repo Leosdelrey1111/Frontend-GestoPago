@@ -1,30 +1,92 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:frontend_gestopago/main.dart';
+import 'package:frontend_gestopago/data/models/api_models.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('CatalogoProductoModel Tests', () {
+    test('Identifica servicio de referencia correctamente', () {
+      final productoCfe = CatalogoProductoModel(
+        id: '1',
+        nombreProducto: 'Pago CFE',
+        servicio: 'CFE',
+        idServicio: '10',
+        idProducto: '100',
+      );
+      expect(productoCfe.esServicioReferencia, isTrue);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      final productoTelcel = CatalogoProductoModel(
+        id: '2',
+        nombreProducto: 'Paquete Amigo 100',
+        servicio: 'TELCEL',
+        idServicio: '82',
+        idProducto: '200',
+      );
+      expect(productoTelcel.esServicioReferencia, isFalse);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('Mapeo de json CatalogoProductoModel', () {
+      final json = {
+        'id': 123,
+        'nombreProducto': 'Telmex Recibo',
+        'servicio': 'TELMEX',
+        'idServicio': '11',
+        'idProducto': '300',
+        'precio': '150.00',
+      };
+      final model = CatalogoProductoModel.fromJson(json);
+      expect(model.nombreProducto, 'Telmex Recibo');
+      expect(model.precio, 150.0);
+      expect(model.esServicioReferencia, isTrue);
+    });
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  group('TicketModel Tests', () {
+    test('Crea TicketModel y copyWith funciona correctamente', () {
+      final ticket = TicketModel(
+        folio: '1001',
+        upc: '123456789012',
+        autorizacionProveedor: 'AUT-789',
+        fechaHora: '2026-11-26 14:00',
+        nombreServicio: 'CFE',
+        referencia: '012345678901',
+        monto: 250.0,
+        estatus: 'PAGADO / APROBADO',
+      );
+
+      expect(ticket.folio, '1001');
+      expect(ticket.monto, 250.0);
+      expect(ticket.upc.length, 12);
+
+      final enriquecido = ticket.copyWith(
+        producto: 'CFE Suministrador de Servicios Básicos',
+        tipoProducto: 'Energía Eléctrica',
+      );
+
+      expect(enriquecido.producto, 'CFE Suministrador de Servicios Básicos');
+      expect(enriquecido.tipoProducto, 'Energía Eléctrica');
+      expect(enriquecido.folio, '1001');
+    });
+
+    test('TicketModel parsea JSON con campos GestoPago', () {
+      final json = {
+        'data': {
+          'folio': 555,
+          'upc': '987654321098',
+          'numeroAutorizacion': 'AUT-999',
+          'fechaOperacion': '2026-11-26 14:30:00',
+          'servicio': 'TELCEL',
+          'referenciaOTelefono': '5512345678',
+          'monto': 100.0,
+          'estatus': 'EXITOSO',
+          'leyenda': 'Transacción procesada',
+        }
+      };
+
+      final ticket = TicketModel.fromJson(json);
+      expect(ticket.folio, '555');
+      expect(ticket.upc, '987654321098');
+      expect(ticket.autorizacionProveedor, 'AUT-999');
+      expect(ticket.referencia, '5512345678');
+      expect(ticket.monto, 100.0);
+    });
   });
 }
