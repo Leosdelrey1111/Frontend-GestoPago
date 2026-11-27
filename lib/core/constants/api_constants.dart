@@ -1,8 +1,8 @@
 class ApiConstants {
-  // En producción apunta a la API desplegada en Render por defecto
+  // En producción apunta a la API desplegada en Railway por defecto
   static const String baseUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'https://gesto-pago-api.onrender.com',
+    defaultValue: 'https://gesto-pago-production.up.railway.app',
   );
 
   // Auth & 2FA
