@@ -135,13 +135,36 @@ class PagoProvider with ChangeNotifier {
       _isProcessingPago = false;
       int? statusCode;
       String rawMsg = '';
+      int? folioRechazo;
+
       if (e is DioException) {
         statusCode = e.response?.statusCode;
-        final data = e.response?.data;
-        if (data is Map && data['mensaje'] != null) {
-          rawMsg = data['mensaje'].toString();
+        final resData = e.response?.data;
+        if (resData is Map) {
+          if (resData['mensaje'] != null) {
+            rawMsg = resData['mensaje'].toString();
+          }
+          final innerData = resData['data'];
+          if (innerData is Map && innerData['folioTransaccion'] != null) {
+            folioRechazo = int.tryParse(innerData['folioTransaccion'].toString());
+          }
         }
       }
+
+      // Si el proveedor rechazó de forma concluyente (422) y tenemos el folio de la transacción registrada,
+      // retornamos el modelo para que la interfaz pueda presentar de inmediato el ticket de rechazo oficial.
+      if (statusCode == 422 && folioRechazo != null) {
+        cargarHistorial();
+        cargarCuentas();
+        _isProcessingPago = false;
+        notifyListeners();
+        return TransaccionResponseModel(
+          folioTransaccion: folioRechazo,
+          mensaje: rawMsg.isNotEmpty ? rawMsg : 'Transacción rechazada por el proveedor',
+          estatus: 'RECHAZADA',
+        );
+      }
+
       if (statusCode == 409) {
         cargarHistorial();
         cargarCuentas();
