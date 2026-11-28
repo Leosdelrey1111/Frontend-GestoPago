@@ -2,6 +2,7 @@ import 'dart:async' as timer_pkg;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/bank_theme.dart';
+import '../../core/widgets/bank_toast.dart';
 import '../../core/utils/responsive_layout.dart';
 import '../../data/models/api_models.dart';
 import '../providers/auth_provider.dart';
