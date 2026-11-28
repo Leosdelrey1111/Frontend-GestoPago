@@ -141,9 +141,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 );
 
                 if (!dialogCtx.mounted) return;
-                Navigator.pop(dialogCtx);
 
                 if (resultado != null && resultado.folioTransaccion != null) {
+                  Navigator.pop(dialogCtx);
                   provider.cargarCuentas();
                   await provider.cargarHistorial();
                   final ticket = await provider.obtenerTicket(resultado.folioTransaccion!);
@@ -159,38 +159,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     );
                   }
                 } else if (mounted) {
+                  // Si falló por PIN o contraseña incorrecta, NO cerrar el modal ni mostrar tickets viejos
+                  final msg = provider.errorMessage ?? 'No fue posible completar el pago.';
+                  final lower = msg.toLowerCase();
+
+                  if (lower.contains('pin') || lower.contains('password') || lower.contains('contrase')) {
+                    BankToast.mostrar(
+                      context,
+                      titulo: 'PIN Incorrecto',
+                      mensaje: 'El PIN transaccional ingresado es incorrecto. No se realizó ningún cargo.',
+                      tipo: ToastTipo.error,
+                    );
+                    return;
+                  }
+
+                  Navigator.pop(dialogCtx);
                   provider.cargarCuentas();
                   await provider.cargarHistorial();
 
-                  // Si la transacción fue rechazada o fallida pero se registró en el historial,
-                  // recuperamos el ticket del último movimiento para mostrar el comprobante de rechazo.
-                  final ultimoMov = provider.historial.isNotEmpty ? provider.historial.first : null;
-                  final esTransaccionRegistrada = ultimoMov != null &&
-                      (ultimoMov.producto.toLowerCase() == producto.nombreProducto.toLowerCase() ||
-                       ultimoMov.servicio.toLowerCase() == producto.servicio.toLowerCase() ||
-                       (ultimoMov.monto - monto).abs() < 0.01);
-
-                  if (esTransaccionRegistrada) {
-                    final ticketRechazo = await provider.obtenerTicket(ultimoMov.folio);
-                    if (ticketRechazo != null && mounted) {
-                      final ticketEnriquecido = ticketRechazo.copyWith(
-                        producto: producto.nombreProducto,
-                        tipoProducto: producto.servicio,
-                        urlLogo: producto.urlLogo,
-                      );
-                      showDialog(
-                        context: context,
-                        builder: (_) => TicketDialog(ticket: ticketEnriquecido),
-                      );
-                      return;
-                    }
-                  }
-
-                  // Si fue un rechazo previo al registro en el proveedor (ej. saldo insuficiente o PIN incorrecto),
-                  // mostramos el toast descriptivo correspondiente.
-                  final msg = provider.errorMessage ?? 'No fue posible completar el pago.';
-                  final lower = msg.toLowerCase();
-                  
                   String tituloToast = 'Operación no realizada';
                   String mensajeToast = msg;
                   bool esAdvertencia = false;
