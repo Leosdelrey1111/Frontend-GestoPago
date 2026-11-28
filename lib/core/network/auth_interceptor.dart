@@ -37,9 +37,12 @@ class AuthInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     final status = err.response?.statusCode;
-    // Solo expira la sesión si la petición viajó con sesión; un 401 en login o 2FA es un error de credenciales/código.
+    final path = err.requestOptions.path;
+    // Solo expira la sesión si la petición viajó con sesión y no es un fallo de PIN/autorización en el pago ni login/2fa.
     final llevabaSesion = err.requestOptions.headers.containsKey('Authorization');
-    if ((status == 401 || status == 403) && llevabaSesion) {
+    final esOperacionConPin = path.contains('/pagar');
+
+    if ((status == 401 || status == 403) && llevabaSesion && !esOperacionConPin) {
       await SessionStorage.clearSession();
       SessionExpiredEvent.onSessionInvalidated('Sesión finalizada. Inicia sesión nuevamente.');
     }
